@@ -20,7 +20,7 @@ export default function Table({
     return (
         <div className="flex flex-col h-full">
             <div className="overflow-auto h-[450px]">
-                <table className="min-w-full text-sm text-left text-gray-700 dark:text-gray-300">
+                <table className="min-w-full text-sm text-gray-700 dark:text-gray-300">
                     <thead className="bg-gray-100 dark:bg-gray-700 sticky top-0">
                         {table.getHeaderGroups().map(headerGroup => (
                             <tr key={headerGroup.id}>

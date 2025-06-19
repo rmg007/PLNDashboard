@@ -1,6 +1,7 @@
 import React, { useMemo, useEffect, useState } from 'react';
 import ChartTableComponent from '../ChartTableComponent';
 import { createColumnHelper } from '@tanstack/react-table';
+import BinCharts from './BinCharts';
 
 const columnHelper = createColumnHelper();
 
@@ -10,7 +11,7 @@ const columns = [
         cell: info => info.getValue(),
         enableSorting: true,
         meta: {
-            className: 'text-right' 
+            className: 'text-center' 
         }
     }),
     columnHelper.accessor('PermitCount', {
@@ -18,7 +19,7 @@ const columns = [
         cell: info => info.getValue().toLocaleString(),
         enableSorting: true,
         meta: {
-            className: 'text-right'
+            className: 'text-center'
         }
     }),
     columnHelper.accessor('AveragePermitsPerMonth', {
@@ -26,13 +27,18 @@ const columns = [
         cell: info => Math.round(info.getValue()).toLocaleString(),
         enableSorting: true,
         meta: {
-            className: 'text-right' 
+            className: 'text-center' 
         }
     }),
 ];
 
 export default function AnnualUniquePermitsReport({ data, isLoading, selectedItemsCount }) {
-    const rubyRedPalette = ['#D32F2F', '#F44336', '#E57373', '#FFCDD2', '#B71C1C']; // Ruby Red Theme
+    const pastelPalette = [
+        'rgb(189, 135, 143)', 'rgb(5, 80, 105)', 'rgb(9, 107, 9)',
+        'rgb(126, 126, 7)', 'rgb(172, 124, 172)', 'rgb(173, 166, 99)',
+        'rgb(155, 180, 180)', 'rgb(167, 147, 145)', 'rgb(163, 175, 163)',
+        'rgb(184, 169, 174)', 'rgb(110, 110, 5)', 'rgb(230, 230, 250)'
+    ]; // Pastel Theme
     const [valuationData, setValuationData] = useState([]);
     const [filteredValuationData, setFilteredValuationData] = useState([]);
     
@@ -79,7 +85,10 @@ export default function AnnualUniquePermitsReport({ data, isLoading, selectedIte
         columnHelper.accessor('permit_range', {
             header: 'Valuation Range',
             cell: info => info.getValue(),
-            enableSorting: true
+            enableSorting: true,
+            meta: {
+                className: 'text-center'
+            }
         }),
         ...Array.from(new Set(filteredValuationData.map(item => item.year)))
             .sort((a, b) => a - b)
@@ -93,7 +102,7 @@ export default function AnnualUniquePermitsReport({ data, isLoading, selectedIte
                     header: year.toString(),
                     cell: info => info.getValue().toLocaleString(),
                     enableSorting: true,
-                    meta: { className: 'text-right' }
+                    meta: { className: 'text-center' }
                 }
             ))
     ], [filteredValuationData]);
@@ -122,7 +131,7 @@ export default function AnnualUniquePermitsReport({ data, isLoading, selectedIte
     //     2023: '#65a30d', // Lime Green
     //     2024: '#9d174d', // Pink
     //     2025: '#1e40af'  // Navy Blue
-    // }), []); // Replaced by rubyRedPalette for valuationTraces
+    // }), []); // Replaced by pastelPalette for valuationTraces
 
     // Create traces for the valuation chart
     const valuationTraces = useMemo(() => {
@@ -148,18 +157,18 @@ export default function AnnualUniquePermitsReport({ data, isLoading, selectedIte
                 y: counts,
                 name: year.toString(),
                 type: 'bar',
-                marker: { color: rubyRedPalette[index % rubyRedPalette.length] },
-                text: counts.map(val => val > 0 ? val.toString() : ''),
-                textposition: 'inside',
+                marker: { color: pastelPalette[index % pastelPalette.length] },
+                text: counts.map(val => val > 0 ? val.toLocaleString() : ''),
+                textposition: 'outside',
                 insidetextanchor: 'middle',
                 textfont: {
-                    color: 'white',
+                    color: '#333',
                     size: 12
                 },
                 hovertemplate: `<b>Year:</b> ${year}<br><b>Range:</b> %{x}<br><b>Volume:</b> %{y}<extra></extra>`
             };
         });
-    }, [filteredValuationData, rubyRedPalette]);
+    }, [filteredValuationData, pastelPalette]);
 
     // Determine if valuation data is loading
     const isValuationLoading = useMemo(() => {
@@ -179,14 +188,31 @@ export default function AnnualUniquePermitsReport({ data, isLoading, selectedIte
                     xAccessor="FiscalYear"
                     yAccessor="PermitCount"
                     chartType="bar"
-                    baseBarColor={rubyRedPalette[0]} // Apply Ruby Red Theme
+                    baseBarColor={pastelPalette[0]}
                     showTrendLine={true}
                     excelFileName="AnnualPermitReport.xlsx"
                     chartFileName="AnnualPermitReport.png"
+                    initialTableWidth={320}
+                    showTablePanel={true}
+                    tableHeaderClassName="text-center"
+                    showBarLabels={true}
+                    barLabelPosition="inside"
+                    barLabelInsideAnchor="middle"
+                    barLabelFontSize={12}
+                    barLabelFontColor="white"
+                    barLabelFormat={value => value.toLocaleString()}
+                    dataLabelsOnLine={true}
+                    dataLabelsFontSize={12}
+                    chartLayout={{
+                        legend: {
+                            orientation: 'h',
+                            y: -0.2
+                        }
+                    }}
                 />
             </div>
             
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4" style={{ minHeight: '1100px' }}>
                 <ChartTableComponent id='chartValuationThresholds'
                     data={valuationTableData}
                     columns={valuationColumns}
@@ -199,19 +225,39 @@ export default function AnnualUniquePermitsReport({ data, isLoading, selectedIte
                     showTrendLine={false}
                     showAverageLine={false}
                     showBarLabels={true}
-                    barLabelPosition="inside"
+                    barLabelPosition="outside"
                     barLabelInsideAnchor="middle"
-                    barLabelFontColor="white"
+                    barLabelFontColor="#333"
                     excelFileName="ValuationThresholdReport.xlsx"
                     chartFileName="ValuationThresholdReport.png"
                     excelSheetName="Valuation Thresholds"
                     showTablePanel={true}
-                    initialSplitPos={70}
+                    initialSplitPos={60}
                     showPagination={false}
                     showChartTypeSwitcher={false}
                     chartType="bar"
+                    splitterOrientation="horizontal"
+                    initialTableWidth={320}
+                    disableHighlighting={true}
+                    disableSelection={true}
+                    tableHeaderClassName="text-center"
+                    chartLayout={{
+                        legend: {
+                            orientation: 'h',
+                            y: -0.2
+                        }
+                    }}
                 />
             </div>
+            
+            {/* Individual Charts for Each Valuation Bin */}
+            <BinCharts 
+                valuationTableData={valuationTableData} 
+                filteredValuationData={filteredValuationData} 
+                columns={columns} 
+                isValuationLoading={isValuationLoading} 
+                pastelPalette={pastelPalette} 
+            />
         </div>
     );
 }

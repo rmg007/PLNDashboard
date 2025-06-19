@@ -163,9 +163,16 @@ export default function ChartTableComponent(props) {
         
         const finalTraces = [{
             x: xValues, y: yValues, type: chartType,
-            mode: chartType === 'line' ? 'lines+markers' : undefined,
+            mode: chartType === 'line' ? 'lines+markers+text' : undefined,
             name: yAxisTitle,
             marker: { color: baseBarColor },
+            text: showBarLabels ? yValues.map(y => y.toLocaleString()) : undefined,
+            textposition: chartType === 'line' ? 'top center' : (barLabelPosition === 'inside' ? 'inside' : 'outside'),
+            insidetextanchor: barLabelInsideAnchor,
+            textfont: {
+                color: chartType === 'line' ? '#333' : (barLabelPosition === 'inside' ? barLabelFontColor : undefined),
+                size: 12
+            },
         }];
 
         if (showAverageLine && yValues.length > 1) {
