@@ -147,7 +147,7 @@ export default function ChartTableComponent(props) {
                     type: 'scatter',
                     mode: 'lines',
                     name: 'Trend',
-                    line: { color: '#d62728', width: 2 },
+                    line: { color: '#d62728', width: 2, shape: 'spline' },
                     hoverinfo: 'name'
                 });
             }
@@ -188,7 +188,7 @@ export default function ChartTableComponent(props) {
             const trendY = xIndices.map(xi => slope * xi + intercept);
             finalTraces.push({
                 x: xValues, y: trendY, type: 'scatter', mode: 'lines',
-                name: 'Trend', line: { color: '#d62728' }
+                name: 'Trend', line: { color: '#d62728', shape: 'spline' }
             });
         }
         
