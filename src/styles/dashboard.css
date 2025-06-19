@@ -1,0 +1,16 @@
+.dashboard-title {
+    @apply text-2xl font-bold mb-4;
+  }
+  
+  .card {
+    @apply p-4 bg-white dark:bg-gray-800 rounded-lg shadow;
+  }
+  
+  .card-title {
+    @apply text-lg font-semibold mb-2;
+  }
+  
+  .card-text {
+    @apply text-sm text-gray-500 dark:text-gray-400;
+  }
+  

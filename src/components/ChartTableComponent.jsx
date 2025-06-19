@@ -1,0 +1,236 @@
+// src/components/ChartTableComponent.jsx
+
+import React, { useState, useCallback, useRef, useMemo, useEffect } from 'react';
+import { useReactTable, getCoreRowModel, getSortedRowModel, getPaginationRowModel } from '@tanstack/react-table';
+import { useDraggableSplitter } from '../hooks/useDraggableSplitter';
+import * as XLSX from 'xlsx';
+import Plotly from 'plotly.js-dist-min';
+import { initTooltips } from '../utils/tooltipInit';
+
+import Toolbar from './ChartTableComponent/Toolbar';
+import Chart from './ChartTableComponent/Chart';
+import Table from './ChartTableComponent/Table';
+
+export default function ChartTableComponent(props) {
+    const {
+        data, columns, chartTitle, xAxisTitle, yAxisTitle, xAccessor, yAccessor,
+        splitterOrientation = 'vertical', initialSplitPos = 70, baseBarColor,
+        traces, barMode, chartType: propChartType = 'bar', xAxisType = 'category',
+        showPagination, showChartTypeSwitcher = true, xAxisTickAngle, chartLayout = {},
+        showTrendLine = true, showAverageLine = true, hideSplitter = false,
+        showBarLabels = false, barLabelPosition = 'outside',
+        barLabelInsideAnchor = 'middle', barLabelFontColor = 'black',
+        containerRef: externalContainerRef, showTableToggle = true
+    } = props;
+
+    // State for tracking highlighted and selected indices
+    const [highlightedIndex, setHighlightedIndex] = useState(null);
+    const [highlightedCurve, setHighlightedCurve] = useState(null);
+    const [selectedIndices, setSelectedIndices] = useState(new Set());
+    const [chartType, setChartType] = useState(propChartType);
+    const [sorting, setSorting] = useState([]);
+    const [tableVisible, setTableVisible] = useState(true);
+    
+    // References
+    const chartRef = useRef(null);
+    const localContainerRef = useRef(null);
+    const containerRef = externalContainerRef || localContainerRef;
+    
+    // Initialize tooltips after render
+    useEffect(() => {
+        initTooltips();
+    }, []);
+
+    // Splitter functionality
+    const { splitPos, isDragging, handleMouseDown } = useDraggableSplitter(containerRef, initialSplitPos, splitterOrientation);
+    
+    // Table initialization
+    const table = useReactTable({
+        data: data || [],
+        columns: columns || [],
+        state: { sorting },
+        onSortingChange: setSorting,
+        getCoreRowModel: getCoreRowModel(),
+        getSortedRowModel: getSortedRowModel(),
+        getPaginationRowModel: getPaginationRowModel(),
+    });
+
+    // Generate chart traces based on data and settings
+    const chartTraces = useMemo(() => {
+        if (traces) {
+            if (chartType === 'line') {
+                return traces.map(trace => ({ ...trace, type: 'scatter', mode: 'lines+markers' }));
+            }
+            return traces;
+        }
+
+        if (!data || !xAccessor || !yAccessor) return [];
+        
+        const sortedData = table.getRowModel().rows.map(row => row.original);
+        const xValues = sortedData.map(d => d[xAccessor]);
+        const yValues = sortedData.map(d => d[yAccessor]);
+        
+        const finalTraces = [{
+            x: xValues, y: yValues, type: chartType,
+            mode: chartType === 'line' ? 'lines+markers' : undefined,
+            name: yAxisTitle,
+            marker: { color: baseBarColor },
+        }];
+
+        if (showAverageLine && yValues.length > 1) {
+            const average = yValues.reduce((a, b) => a + b, 0) / yValues.length;
+            finalTraces.push({
+                x: [xValues[0], xValues[xValues.length - 1]], y: [average, average],
+                type: 'scatter', mode: 'lines', name: `Average`,
+                line: { color: '#ff7f0e', dash: 'dash' }, hoverinfo: 'name',
+            });
+        }
+        if (showTrendLine && yValues.length > 1) {
+            const n = yValues.length;
+            const xIndices = Array.from({length: n}, (_, i) => i);
+            const sumX = xIndices.reduce((a, b) => a + b, 0);
+            const sumY = yValues.reduce((a, b) => a + b, 0);
+            const sumXY = xIndices.map((xi, i) => xi * yValues[i]).reduce((a, b) => a + b, 0);
+            const sumXX = xIndices.map(xi => xi * xi).reduce((a, b) => a + b, 0);
+            const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+            const intercept = (sumY - slope * sumX) / n;
+            const trendY = xIndices.map(xi => slope * xi + intercept);
+            finalTraces.push({
+                x: xValues, y: trendY, type: 'scatter', mode: 'lines',
+                name: 'Trend', line: { color: '#d62728' }
+            });
+        }
+        
+        return finalTraces;
+    }, [traces, chartType, data, xAccessor, yAccessor, table, sorting, baseBarColor, yAxisTitle, showTrendLine, showAverageLine]);
+
+    // Handle row selection
+    const handleRowSelect = useCallback((index) => {
+        setSelectedIndices(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(index)) {
+                newSet.delete(index);
+            } else {
+                newSet.add(index);
+            }
+            return newSet;
+        });
+    }, []);
+
+    // Handle chart hover events
+    const handleChartHover = useCallback((index, curve) => {
+        setHighlightedIndex(index);
+        setHighlightedCurve(curve);
+    }, []);
+
+    // Handle mouse leave events
+    const handleLeave = useCallback(() => {
+        setHighlightedIndex(null);
+        setHighlightedCurve(null);
+    }, []);
+
+    // Handle row hover events
+    const handleRowHover = useCallback((index) => {
+        setHighlightedIndex(index);
+        setHighlightedCurve(null);
+    }, []);
+    
+    // Handle CSV export
+    const handleExportCsv = useCallback(() => {
+        if (!data || !Array.isArray(data) || data.length === 0) return;
+        
+        const ws = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Data");
+        
+        const fileName = `${chartTitle || 'chart_data'}_export_${new Date().toISOString().slice(0,10)}.xlsx`;
+        XLSX.writeFile(wb, fileName);
+    }, [data, chartTitle]);
+    
+    // Handle PNG export
+    const handleExportPng = useCallback(() => {
+        if (!chartRef.current) return;
+        
+        Plotly.downloadImage(chartRef.current, {
+            format: 'png',
+            filename: `${chartTitle || 'chart'}_${new Date().toISOString().slice(0,10)}`,
+            height: 800,
+            width: 1200
+        });
+    }, [chartRef, chartTitle]);
+
+    // Calculate chart panel style based on splitter position and table visibility
+    // When table is hidden, maintain the same height but use full width
+    const chartPanelStyle = hideSplitter || !tableVisible 
+        ? { width: '100%', height: '100%' } 
+        : { width: `${splitPos}%`, flexShrink: 0 };
+    
+    return (
+        <div className="w-full h-full flex flex-col">
+            <Toolbar 
+                chartType={chartType} 
+                setChartType={setChartType} 
+                onExportCsv={handleExportCsv} 
+                onExportPng={handleExportPng} 
+                showChartTypeSwitcher={showChartTypeSwitcher}
+                tableVisible={tableVisible}
+                onToggleTable={() => setTableVisible(prev => !prev)}
+                showTableToggle={showTableToggle}
+            />
+            <div 
+                ref={containerRef} 
+                className={`relative flex flex-grow overflow-hidden ${splitterOrientation === 'vertical' ? 'flex-row' : 'flex-col'}`}
+                style={{ minHeight: '450px' }} // Set a consistent minimum height to prevent layout shift
+            >
+                <div 
+                    style={chartPanelStyle} 
+                    className={`h-full relative ${!hideSplitter && 'pr-2'} ${isDragging ? 'pointer-events-none' : ''}`}
+                >
+                    <Chart
+                        chartRef={chartRef}
+                        traces={chartTraces}
+                        layout={{
+                            title: { text: chartTitle },
+                            xaxis: { title: xAxisTitle, type: xAxisType, tickangle: xAxisTickAngle },
+                            yaxis: { title: yAxisTitle, tickformat: ',d' },
+                            ...chartLayout
+                        }}
+                        barMode={barMode}
+                        highlightedIndex={highlightedIndex}
+                        highlightedCurve={highlightedCurve}
+                        selectedIndices={Array.from(selectedIndices)}
+                        onHover={handleChartHover}
+                        onLeave={handleLeave}
+                        onSelect={handleRowSelect}
+                    />
+                </div>
+                {!hideSplitter && tableVisible && (
+                    <>
+                        <div 
+                            id="splitter" 
+                            onMouseDown={handleMouseDown}
+                            style={{
+                                cursor: splitterOrientation === 'vertical' ? 'col-resize' : 'row-resize',
+                                background: '#e5e7eb',
+                                width: splitterOrientation === 'vertical' ? '4px' : '100%',
+                                height: splitterOrientation === 'vertical' ? '100%' : '4px',
+                            }}
+                            className="flex-shrink-0 hover:bg-blue-300 transition-colors"
+                        />
+                        <div style={{ width: `${100 - splitPos}%`, flexShrink: 0 }} className={`h-full ${isDragging ? 'pointer-events-none' : ''}`}>
+                            <Table 
+                                table={table}
+                                highlightedIndex={highlightedIndex}
+                                onRowHover={handleRowHover}
+                                onRowLeave={handleLeave}
+                                selectedIndices={selectedIndices}
+                                onRowSelect={handleRowSelect}
+                                showPagination={showPagination}
+                            />
+                        </div>
+                    </>
+                )}
+            </div>
+        </div>
+    );
+}
