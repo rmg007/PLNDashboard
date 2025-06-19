@@ -4,26 +4,31 @@ import { createColumnHelper } from '@tanstack/react-table';
 
 const columnHelper = createColumnHelper();
 
-// Theme 6: Ocean Blue Palette
-const oceanBluePalette = ['#0077B6', '#00B4D8', '#90E0EF', '#CAF0F8', '#03045E'];
+// Custom RGB Palette
+const customPalette = [
+    'rgb(220, 88, 42)', 'rgb(255, 159, 64)', 'rgb(153, 102, 51)', 
+    'rgb(134, 100, 36)', 'rgb(210, 105, 30)', 'rgb(204, 121, 167)', 
+    'rgb(240, 128, 128)', 'rgb(255, 205, 86)', 'rgb(201, 203, 207)', 
+    'rgb(75, 192, 192)', 'rgb(0, 114, 178)', 'rgb(86, 180, 233)'
+];
 
 export default function QuarterlyUniquePermitsReport({ data, isLoading }) {
 
     // --- Column Definitions for the various tables ---
     const baseQuarterlyColumns = useMemo(() => [
-        columnHelper.accessor('FiscalYear', { header: 'Fiscal Yr.', meta: { className: 'text-right' } }),
-        columnHelper.accessor('FiscalQuarter', { header: 'Quarter', cell: info => `Q${info.getValue()}`, meta: { className: 'text-right' } }),
-        columnHelper.accessor('PermitCount', { header: 'Permit Vol.', cell: info => info.getValue().toLocaleString(), meta: { className: 'text-right' } }),
+        columnHelper.accessor('FiscalYear', { header: 'Fiscal Yr.', meta: { className: 'text-center' } }),
+        columnHelper.accessor('FiscalQuarter', { header: 'Quarter', cell: info => `Q${info.getValue()}`, meta: { className: 'text-center' } }),
+        columnHelper.accessor('PermitCount', { header: 'Permit Vol.', cell: info => info.getValue().toLocaleString(), meta: { className: 'text-center' } }),
     ], []);
 
     const singleYearColumns = useMemo(() => [
-        columnHelper.accessor('FiscalYear', { header: 'Fiscal Year', meta: { className: 'text-right' } }),
-        columnHelper.accessor('PermitCount', { header: 'Total Permits', cell: info => info.getValue().toLocaleString(), meta: { className: 'text-right' } }),
+        columnHelper.accessor('FiscalYear', { header: 'Fiscal Year', meta: { className: 'text-center' } }),
+        columnHelper.accessor('PermitCount', { header: 'Total Permits', cell: info => info.getValue().toLocaleString(), meta: { className: 'text-center' } }),
     ], []);
 
     const singleQuarterTrendColumns = useMemo(() => [
-        columnHelper.accessor('FiscalYear', { header: 'Fiscal Year', meta: { className: 'text-right' } }),
-        columnHelper.accessor('PermitCount', { header: 'Permit Count', cell: info => info.getValue().toLocaleString(), meta: { className: 'text-right' } }),
+        columnHelper.accessor('FiscalYear', { header: 'Fiscal Year', meta: { className: 'text-center' } }),
+        columnHelper.accessor('PermitCount', { header: 'Permit Count', cell: info => info.getValue().toLocaleString(), meta: { className: 'text-center' } }),
     ], []);
 
     // --- Data Preparation Logic ---
@@ -50,7 +55,7 @@ export default function QuarterlyUniquePermitsReport({ data, isLoading }) {
                 text: quarterData.map(value => value ? `Q${i}: ${value.toLocaleString()}` : ''),
                 hoverinfo: 'y+name',
                 hovertemplate: `<b>%{x} - Q${i}</b><br>Volume: %{y:,} permits<extra></extra>`,
-                marker: { color: oceanBluePalette[i-1 % oceanBluePalette.length] } // Use Ocean Blue Palette
+                marker: { color: customPalette[i-1 % customPalette.length] } // Use Ocean Blue Palette
             };
             
             // The trace will work for both bar and line charts
@@ -72,14 +77,14 @@ export default function QuarterlyUniquePermitsReport({ data, isLoading }) {
                 // Line chart specific properties (will be used when switching to line chart)
                 // These properties will be applied by the Chart component when type is changed to 'scatter'
                 line: {
-                    color: oceanBluePalette[i-1 % oceanBluePalette.length], // Use Ocean Blue Palette
+                    color: customPalette[i-1 % customPalette.length], // Use Ocean Blue Palette
                     width: 3
                 },
                 mode: 'lines+markers', // For line chart mode
             });
         }
         return traces;
-    }, [data, oceanBluePalette]);
+    }, [data, customPalette]);
     
     // 2. Data transformation for Chart 2 (Quarterly Data by Year)
     const quarterlyByYearData = useMemo(() => {
@@ -111,7 +116,7 @@ export default function QuarterlyUniquePermitsReport({ data, isLoading }) {
         const quarters = [1, 2, 3, 4];
         
         // For each year, create a trace with data for all quarters
-        // Each year will be a different bar group, colored by the oceanBluePalette
+        // Each year will be a different bar group, colored by the customPalette
         years.forEach((year, i) => {
             // For each quarter, find the permit count for this year
             const quarterValues = quarters.map(quarter => {
@@ -125,8 +130,8 @@ export default function QuarterlyUniquePermitsReport({ data, isLoading }) {
                 y: quarterValues,
                 name: `${year}`,
                 type: 'bar',
-                // Use the oceanBluePalette, cycling through colors for each year
-                marker: { color: oceanBluePalette[i % oceanBluePalette.length] },
+                // Use the customPalette, cycling through colors for each year
+                marker: { color: customPalette[i % customPalette.length] },
                 text: quarterValues.map((value, idx) => value ? `${year}: ${value.toLocaleString()}` : ''),
                 textposition: 'inside',
                 insidetextanchor: 'middle',
@@ -142,7 +147,7 @@ export default function QuarterlyUniquePermitsReport({ data, isLoading }) {
         });
         
         return traces;
-    }, [data, oceanBluePalette]);
+    }, [data, customPalette]);
 
     // Data for individual quarter charts
     const q1Data = useMemo(() => data.filter(item => item.FiscalQuarter === 1), [data]);
@@ -202,13 +207,13 @@ export default function QuarterlyUniquePermitsReport({ data, isLoading }) {
             type: 'scatter',
             mode: 'lines+markers',
             name: 'Permit Volume Trend',
-            line: { color: oceanBluePalette[0], width: 3 }, // Use first color from the theme
-            marker: { size: 8, color: oceanBluePalette[0] },
+            line: { color: customPalette[0], width: 3 }, // Use first color from the theme
+            marker: { size: 8, color: customPalette[0] },
             hovertemplate: '<b>%{x}</b><br>Volume: %{y:,} permits<extra></extra>'
         };
 
         return [singleTrace]; // Return as an array containing the single trace
-    }, [data, oceanBluePalette]);
+    }, [data, customPalette]);
 
     return (
             <>
@@ -223,11 +228,14 @@ export default function QuarterlyUniquePermitsReport({ data, isLoading }) {
                         yAxisTitle="Permit Volume"
                         traces={quarterlyTrendTraces}
                         chartType="line"
-                        showTrendLine={false}
-                        showAverageLine={false}
+                        showTrendLine={true}
+                        showAverageLine={true}
                         xAxisTickAngle={-45}
                         showTablePanel={true}
                         initialSplitPos={80}
+                        initialTableWidth={350}
+                        tableHeaderClassName="text-center"
+
                         chartLayout={{
                             showlegend: false  // Hide the legend completely
                         }}
@@ -236,11 +244,13 @@ export default function QuarterlyUniquePermitsReport({ data, isLoading }) {
                         excelSheetName="Quarterly Trend Data"
                         showPagination={true}
                         showChartTypeSwitcher={false}
+                        disableHighlighting={false}
+                        disableSelection={false}
                     />
                 </div>
                 
                 {/* --- Chart 1: Grouped Bar Chart --- */}
-                <div className="bg-white dark:bg-gray-800/50 p-4 rounded-lg shadow mb-8" id='quarterly-grouped-report'>
+                <div id='quarterly-grouped-report-div' className="bg-white dark:bg-gray-800/50 p-4 rounded-lg shadow mb-8" id='quarterly-grouped-report'>
                     <ChartTableComponent id='chart1_Quarterly'
                         data={data}
                         columns={baseQuarterlyColumns}
@@ -252,12 +262,19 @@ export default function QuarterlyUniquePermitsReport({ data, isLoading }) {
                         barMode="group"
                         showTrendLine={false}
                         showAverageLine={false}
-                        showBarLabels={false}
+                        showBarLabels={true}
+                        showDataLabels={true}
+                        dataLabelPosition="outside"
+                        barLabelFontColor="black"
                         excelFileName="Quarterly-Grouped-Report.xlsx"
                         chartFileName="Quarterly-Grouped-Report.png"
                         excelSheetName="Quarterly Grouped Data"
                         showTablePanel={true}
                         initialSplitPos={80}
+                        initialTableWidth={350}
+                        tableHeaderClassName="text-center"
+                        disableHighlighting={true}
+                        disableSelection={true}
                         showPagination={true}
                         showChartTypeSwitcher={false}
                     />
@@ -276,9 +293,16 @@ export default function QuarterlyUniquePermitsReport({ data, isLoading }) {
                         barMode="group"
                         showTrendLine={false}
                         showAverageLine={false}
-                        showBarLabels={false}
+                        showBarLabels={true}
+                        showDataLabels={true}
+                        dataLabelPosition="outside"
+                        barLabelFontColor="black"
                         showTablePanel={true}
                         initialSplitPos={80}
+                        initialTableWidth={350}
+                        tableHeaderClassName="text-center"
+                        disableHighlighting={true}
+                        disableSelection={true}
                         excelFileName="Quarterly-Grouped-Report-2.xlsx"
                         chartFileName="Quarterly-Grouped-Report-2.png"
                         excelSheetName="Quarterly Grouped Data"
@@ -303,15 +327,17 @@ export default function QuarterlyUniquePermitsReport({ data, isLoading }) {
                         xAccessor="FiscalYear"
                         yAccessor="PermitCount"
                         chartType="line"
-                        baseBarColor={oceanBluePalette[0]} // Q1 - Ocean Blue
+                        baseBarColor={customPalette[0]} // Q1 - Ocean Blue
                         showTablePanel={false}
                         initialSplitPos={100}
                         hideSplitter={true}
                         chartLayout={{...quarterlyChartLayout, showlegend: false}}
                         chartFileName="Q1-Permits-Chart.png"
                         showTrendLine={false}
-                        showAverageLine={false}
+                        showAverageLine={true}
                         showTableToggle={false}
+                        showDataLabels={true}
+                        dataLabelPosition="outside"
                     />
                 </div>
                 <div className="bg-white dark:bg-gray-800/50 p-4 rounded-lg shadow">
@@ -324,16 +350,22 @@ export default function QuarterlyUniquePermitsReport({ data, isLoading }) {
                         yAxisTitle="Permit Count"
                         xAccessor="FiscalYear"
                         yAccessor="PermitCount"
-                        chartType="line"
-                        baseBarColor={oceanBluePalette[1]} // Q2 - Sky Blue
+                        initialChartType="line" // Start with line chart
+                        showChartTypeSwitcher={true} // Enable chart type switching
+                        baseBarColor={customPalette[1]} // Q2 - Sky Blue
+                        barLabelPosition="inside" // Position bar labels inside
+                        barLabelInsideAnchor="middle" // Center the labels inside bars
+                        dataLabelFontColor="black" // For line chart data labels
+                        barLabelFontColor="white" // For bar chart data labels
                         showTablePanel={false}
                         initialSplitPos={100}
                         hideSplitter={true}
                         chartLayout={{...quarterlyChartLayout, showlegend: false}}
                         chartFileName="Q2-Permits-Chart.png"
                         showTrendLine={false}
-                        showAverageLine={false}
+                        showAverageLine={true}
                         showTableToggle={false}
+                        showDataLabels={true}
                     />
                 </div>
                 <div className="bg-white dark:bg-gray-800/50 p-4 rounded-lg shadow">
@@ -346,16 +378,22 @@ export default function QuarterlyUniquePermitsReport({ data, isLoading }) {
                         yAxisTitle="Permit Count"
                         xAccessor="FiscalYear"
                         yAccessor="PermitCount"
-                        chartType="line"
-                        baseBarColor={oceanBluePalette[2]} // Q3 - Light Sky Blue
+                        initialChartType="line" // Start with line chart
+                        showChartTypeSwitcher={true} // Enable chart type switching
+                        baseBarColor={customPalette[2]} // Q3 - Light Sky Blue
+                        barLabelPosition="inside" // Position bar labels inside
+                        barLabelInsideAnchor="middle" // Center the labels inside bars
+                        dataLabelFontColor="black" // For line chart data labels
+                        barLabelFontColor="white" // For bar chart data labels
                         showTablePanel={false}
                         initialSplitPos={100}
                         hideSplitter={true}
                         chartLayout={{...quarterlyChartLayout, showlegend: false}}
                         chartFileName="Q3-Permits-Chart.png"
                         showTrendLine={false}
-                        showAverageLine={false}
+                        showAverageLine={true}
                         showTableToggle={false}
+                        showDataLabels={true}
                     />
                 </div>
                 <div className="bg-white dark:bg-gray-800/50 p-4 rounded-lg shadow">
@@ -369,16 +407,21 @@ export default function QuarterlyUniquePermitsReport({ data, isLoading }) {
                         xAccessor="FiscalYear"
                         yAccessor="PermitCount"
                         showTableToggle={false}
-                        chartType="line"
-                        baseBarColor={oceanBluePalette[3]} // Q4 - Pale Sky Blue
-                        barLabelFontColor="black"
+                        initialChartType="line" // Start with line chart
+                        showChartTypeSwitcher={true} // Enable chart type switching
+                        baseBarColor={customPalette[3]} // Q4 - Pale Sky Blue
+                        barLabelPosition="inside" // Position bar labels inside
+                        barLabelInsideAnchor="middle" // Center the labels inside bars
+                        dataLabelFontColor="black" // For line chart data labels
+                        barLabelFontColor="white" // For bar chart data labels
                         showTablePanel={false}
                         initialSplitPos={100}
                         hideSplitter={true}
                         chartLayout={{...quarterlyChartLayout, showlegend: false}}
                         chartFileName="Q4-Permits-Chart.png"
                         showTrendLine={false}
-                        showAverageLine={false}
+                        showAverageLine={true}
+                        showDataLabels={true}
                     />
                 </div>
             </div>

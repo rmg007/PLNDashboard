@@ -15,21 +15,36 @@ export default function ChartTableComponent(props) {
     const {
         data, columns, chartTitle, xAxisTitle, yAxisTitle, xAccessor, yAccessor,
         splitterOrientation = 'vertical', initialSplitPos = 70, baseBarColor,
-        traces, barMode, chartType: propChartType = 'bar', xAxisType = 'category',
+        traces, barMode, 
+        // Support both chartType and initialChartType props
+        initialChartType: propInitialChartType, chartType: propChartType, 
+        xAxisType = 'category',
         showPagination, showChartTypeSwitcher = true, xAxisTickAngle, chartLayout = {},
         showTrendLine = true, showAverageLine = true, hideSplitter = false,
         showBarLabels = false, barLabelPosition = 'outside',
         barLabelInsideAnchor = 'middle', barLabelFontColor = 'black',
         containerRef: externalContainerRef, showTableToggle = true,
         initialTableWidth = null, disableHighlighting = false,
-        showLineLabels = false, id, disableSelection = false
+        showLineLabels = false, id, disableSelection = false,
+        dataLabelFontColor = 'black', // New prop for line chart data label color
+        showDataLabels = false // New prop to explicitly control data labels
     } = props;
+    
+    // Determine initial chart type from props, with priority: chartType > initialChartType > default 'bar'
+    const initialChartTypeFromProps = propChartType || propInitialChartType || 'bar';
 
     // State for tracking highlighted and selected indices
     const [highlightedIndex, setHighlightedIndex] = useState(null);
     const [highlightedCurve, setHighlightedCurve] = useState(null);
     const [selectedIndices, setSelectedIndices] = useState(new Set());
-    const [chartType, setChartType] = useState(propChartType);
+    // Initialize state directly from the prop, ensuring it's defined or defaults to 'bar'
+    const [chartType, setChartType] = useState(initialChartTypeFromProps || 'bar');
+
+    // Effect to update chartType if the prop changes after initial render
+    useEffect(() => {
+        setChartType(initialChartTypeFromProps);
+    }, [initialChartTypeFromProps]);
+
     const [sorting, setSorting] = useState([]);
     const [tableVisible, setTableVisible] = useState(true);
     
@@ -77,8 +92,8 @@ export default function ChartTableComponent(props) {
             // Process traces based on chart type
             if (chartType === 'line') {
                 finalTraces = traces.map(trace => {
-                    // For chartPSCActivity or when showLineLabels is true, add text labels to line charts
-                    if (id === 'chartPSCActivity' || showLineLabels) {
+                    // Show data labels for line charts when showDataLabels or showLineLabels is true
+                    if (id === 'chartPSCActivity' || showLineLabels || showDataLabels) {
                         return { 
                             ...trace, 
                             type: 'scatter', 
@@ -88,7 +103,7 @@ export default function ChartTableComponent(props) {
                             textfont: {
                                 family: 'Arial, sans-serif',
                                 size: 12,
-                                color: document.body.classList.contains('dark') ? '#FFF' : '#333'
+                                color: dataLabelFontColor || (document.body.classList.contains('dark') ? '#FFF' : '#333')
                             }
                         };
                     }
@@ -163,14 +178,14 @@ export default function ChartTableComponent(props) {
         
         const finalTraces = [{
             x: xValues, y: yValues, type: chartType,
-            mode: chartType === 'line' ? 'lines+markers+text' : undefined,
+            mode: chartType === 'line' ? (showDataLabels ? 'lines+markers+text' : 'lines+markers') : undefined,
             name: yAxisTitle,
             marker: { color: baseBarColor },
-            text: showBarLabels ? yValues.map(y => y.toLocaleString()) : undefined,
+            text: (chartType === 'bar' && showBarLabels) || (chartType === 'line' && showDataLabels) ? yValues.map(y => y.toLocaleString()) : undefined,
             textposition: chartType === 'line' ? 'top center' : (barLabelPosition === 'inside' ? 'inside' : 'outside'),
             insidetextanchor: barLabelInsideAnchor,
             textfont: {
-                color: chartType === 'line' ? '#333' : (barLabelPosition === 'inside' ? barLabelFontColor : undefined),
+                color: chartType === 'line' ? dataLabelFontColor : (barLabelPosition === 'inside' ? barLabelFontColor : undefined),
                 size: 12
             },
         }];

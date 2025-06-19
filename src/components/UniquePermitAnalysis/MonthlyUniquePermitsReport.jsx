@@ -6,20 +6,20 @@ import { createColumnHelper } from '@tanstack/react-table';
 
 const columnHelper = createColumnHelper();
 
-// Theme B: Warm Earth Tones (directly from user's VBA ThemeBColors)
-const themeBWarmEarthTones = [
-    'rgb(220, 88, 42)',   // RGB(220, 88, 42)
-    'rgb(255, 159, 64)',  // RGB(255, 159, 64)
-    'rgb(153, 102, 51)',  // RGB(153, 102, 51)
-    'rgb(245, 222, 179)', // RGB(245, 222, 179)
-    'rgb(210, 105, 30)',  // RGB(210, 105, 30)
-    'rgb(204, 121, 167)', // RGB(204, 121, 167)
-    'rgb(240, 128, 128)', // RGB(240, 128, 128)
-    'rgb(255, 205, 86)',  // RGB(255, 205, 86)
+// Custom RGB Palette for Monthly Reports
+const customPalette = [
+    'rgb(54, 84, 134)',   // RGB(54, 84, 134)
+    'rgb(75, 123, 236)',  // RGB(75, 123, 236)
+    'rgb(102, 51, 153)',  // RGB(102, 51, 153)
+    'rgb(153, 102, 255)', // RGB(153, 102, 255)
     'rgb(201, 203, 207)', // RGB(201, 203, 207)
-    'rgb(75, 192, 192)',  // RGB(75, 192, 192)
-    'rgb(0, 114, 178)',   // RGB(0, 114, 178)
-    'rgb(86, 180, 233)'   // RGB(86, 180, 233)
+    'rgb(54, 162, 235)',  // RGB(54, 162, 235)
+    'rgb(0, 200, 83)',    // RGB(0, 200, 83)
+    'rgb(210, 105, 30)',  // RGB(210, 105, 30)
+    'rgb(128, 0, 128)',   // RGB(128, 0, 128)
+    'rgb(63, 81, 181)',   // RGB(63, 81, 181)
+    'rgb(240, 228, 66)',  // RGB(240, 228, 66)
+    'rgb(255, 99, 132)'   // RGB(255, 99, 132)
 ];
 
 // Month names for conversion
@@ -121,7 +121,7 @@ export default function MonthlyUniquePermitsReport({ data, isLoading }) {
         y: monthlyValues,
         name: year.toString(),
         type: 'bar',
-        marker: { color: themeBWarmEarthTones[index % themeBWarmEarthTones.length] }, // Ensure this uses the theme palette
+        marker: { color: customPalette[index % customPalette.length] }, // Ensure this uses the theme palette
         text: monthlyValues.map(val => val > 0 ? val.toString() : ''),
         textposition: 'inside',
         insidetextanchor: 'middle',
@@ -135,7 +135,55 @@ export default function MonthlyUniquePermitsReport({ data, isLoading }) {
     });
     
     return traces;
-  }, [data, themeBWarmEarthTones]); // Using Theme B warm earth tones
+  }, [data, customPalette]); // Using Theme B warm earth tones
+
+  // Filter data for the last three years
+  const lastThreeYearsData = useMemo(() => {
+    if (!data || data.length === 0) return [];
+    
+    // Get unique years from the data
+    const years = [...new Set(data.map(d => d.FiscalYear))].sort((a, b) => b - a); // Sort descending
+    
+    // Take only the last 3 years (or fewer if less data is available)
+    const recentYears = years.slice(0, 3);
+    
+    // Filter data to only include these years
+    return data.filter(d => recentYears.includes(d.FiscalYear));
+  }, [data]);
+
+  // Generate traces for the monthly trend line chart
+  const monthlyTrendTraces = useMemo(() => {
+    if (!Array.isArray(lastThreeYearsData) || lastThreeYearsData.length === 0) return [];
+
+    // 1. Sort data chronologically
+    const sortedData = [...lastThreeYearsData].sort((a, b) => {
+      if (a.FiscalYear === b.FiscalYear) {
+        // Convert month abbreviations to numbers for comparison
+        const monthOrder = {'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6, 
+                          'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12};
+        return monthOrder[a.FiscalMonth] - monthOrder[b.FiscalMonth];
+      }
+      return a.FiscalYear - b.FiscalYear;
+    });
+
+    // 2. Create X-axis labels (e.g., "2023-Jan") and Y-axis values
+    const xValues = sortedData.map(item => `${item.FiscalYear}-${item.FiscalMonth}`);
+    const yValues = sortedData.map(item => item.PermitCount);
+
+    // 3. Create single trace object
+    const singleTrace = {
+      x: xValues,
+      y: yValues,
+      type: 'scatter',
+      mode: 'lines+markers',
+      name: 'Permit Volume Trend',
+      line: { color: customPalette[0], width: 3 }, // Use first color from the theme
+      marker: { size: 8, color: customPalette[0] },
+      hovertemplate: '<b>%{x}</b><br>Volume: %{y:,} permits<extra></extra>'
+    };
+
+    return [singleTrace]; // Return as an array containing the single trace
+  }, [lastThreeYearsData, customPalette]);
 
   // 1. Monthly Analysis (Full Width) - Grouped by Month
   // Transform data to create grouped bar chart traces for each year with monthly data
@@ -170,9 +218,10 @@ export default function MonthlyUniquePermitsReport({ data, isLoading }) {
         y: monthlyValues,
         name: year.toString(),
         type: 'bar',
-        marker: { color: themeBWarmEarthTones[index % themeBWarmEarthTones.length] },
+        marker: { color: customPalette[index % customPalette.length] },
         text: monthlyValues.map(val => val > 0 ? val.toLocaleString() : ''),
         textposition: 'outside',
+        textangle: -90, // Rotate data labels by -90 degrees
         textfont: {
           size: 12,
           color: 'black'
@@ -182,7 +231,7 @@ export default function MonthlyUniquePermitsReport({ data, isLoading }) {
     });
     
     return traces;
-  }, [data, themeBWarmEarthTones]);
+  }, [data, customPalette]);
 
   // 2. Monthly Permit Count by Year (Full Width) - for trend across years
   // This aggregates permits by FiscalYear from the incoming data
@@ -203,89 +252,91 @@ export default function MonthlyUniquePermitsReport({ data, isLoading }) {
     return data.filter(d => d.FiscalMonth === monthAbbr);
   }, [data]);
 
-  // Generate traces for a single month's data
-  const generateMonthlyTraces = useCallback((monthData) => {
-    if (!monthData || monthData.length === 0) return [];
-    
-    // Get unique years from the data
-    const years = [...new Set(monthData.map(d => d.FiscalYear))].sort((a, b) => a - b);
-    
-    // Create a trace for each year
-    return years.map((year, index) => {
-      const color = themeBWarmEarthTones[index % themeBWarmEarthTones.length];
-      return {
-        x: [year.toString()],
-        y: [monthData.find(d => d.FiscalYear === year)?.PermitCount || 0],
-        name: year.toString(),
-        type: 'line', // Set type to line by default
-        mode: 'lines+markers+text', // Show lines, markers and text
-        line: {
-          color: color,
-          width: 3 // Make lines thicker for better visibility
-        },
-        marker: { 
-          color: color,
-          size: 8 // Larger markers for better visibility
-        },
-        text: [(monthData.find(d => d.FiscalYear === year)?.PermitCount || 0).toString()],
-        textposition: 'top',
-        textfont: {
-          size: 12,
-          color: 'black'
-        },
-        hovertemplate: `<b>Year: ${year}</b><br>Permits: %{y}<extra></extra>`
-      };
-    });
-  }, [themeBWarmEarthTones]);
-
-  // Generate an array of data and traces for all 12 months
-  const monthlyBreakdownChartsData = useMemo(() => {
-    return Array.from({ length: 12 }, (_, i) => {
-      const monthNum = i + 1;
-      const monthData = getSingleMonthData(monthNum);
-      return {
-        monthNum,
-        data: monthData,
-        traces: generateMonthlyTraces(monthData)
-      };
-    });
-  }, [getSingleMonthData, generateMonthlyTraces]);
-
-  // Calculate the global maximum value for the y-axis across all monthly charts
+  // Calculate global max permit count for consistent y-axis scaling
   const globalMaxPermitCount = useMemo(() => {
-    // Flatten all monthly data and find the maximum PermitCount
-    const allMonthlyData = monthlyBreakdownChartsData.flatMap(({ data }) => data);
-    const maxValue = Math.max(...allMonthlyData.map(item => item.PermitCount), 0);
-    // Round up to the nearest 10 or 100 for a clean max value
+    if (!data || data.length === 0) return 100; // Default max if no data
+    // Find the maximum PermitCount from the main data prop
+    const maxValue = Math.max(...data.map(item => item.PermitCount || 0), 0);
+    // Round up to the nearest 100 for a clean max value
     return Math.ceil(maxValue / 100) * 100;
-  }, [monthlyBreakdownChartsData]);
-
+  }, [data]);
 
   return (
     <div className="monthly-analysis-section space-y-8">
       {/* Full-width charts */}
       <div className="flex flex-col gap-8">
-        {/* Chart 0: Quarterly Grouped Bar Chart */}
-        <div className="bg-white dark:bg-gray-800/50 p-4 rounded-lg shadow mb-8" id='quarterly-grouped-report'>
-          <ChartTableComponent id='chart0_monthly_grouped'
+        {/* Chart 0: Monthly Trend Line Chart */}
+        <div className="bg-white dark:bg-gray-800/50 p-4 rounded-lg shadow mb-8" id='monthly-trend-report'>
+          <ChartTableComponent id='chart0_Monthly_Trend'
+            data={lastThreeYearsData}
+            columns={baseMonthlyColumns}
+            isLoading={isLoading}
+            chartTitle="Permit Volume by Unique Permit Numbers — Monthly Trend (Last 3 Years)"
+            xAxisTitle="Month"
+            yAxisTitle="Permit Volume"
+            traces={monthlyTrendTraces}
+            chartType="line"
+            showTrendLine={true}
+            showAverageLine={true}
+            xAxisTickAngle={-45}
+            showTablePanel={true}
+            initialSplitPos={80}
+            initialTableWidth={350}
+            tableHeaderClassName="text-center"
+            chartLayout={{
+              showlegend: false  // Hide the legend completely
+            }}
+            excelFileName="Monthly-Trend-Report.xlsx"
+            chartFileName="Monthly-Trend-Report.png"
+            excelSheetName="Monthly Trend Data"
+            showPagination={true}
+            showChartTypeSwitcher={false}
+            disableHighlighting={false}
+            disableSelection={false}
+            showDataLabels={true}
+          />
+        </div>
+
+        {/* Chart 1: Monthly Grouped Bar Chart */}
+        <div className="bg-white dark:bg-gray-800/50 p-4 rounded-lg shadow mb-8" id='monthly-grouped-report'>
+          <ChartTableComponent id='chart1_monthly_grouped'
             data={data}
             columns={baseMonthlyColumns}
             isLoading={isLoading}
-            chartTitle="Permit Volume by Unique Permit Numbers — Quarterly Volumes"
-            xAxisTitle="Fiscal Quarter"
+            chartTitle="Permit Volume by Unique Permit Numbers — Monthly Volumes"
+            xAxisTitle="Fiscal Month"
             yAxisTitle="Permit Volume"
             traces={groupedBarTraces}
             barMode="group"
             showTrendLine={false}
             showAverageLine={false}
-            showBarLabels={false}
-            excelFileName="Quarterly-Grouped-Report.xlsx"
-            chartFileName="Quarterly-Grouped-Report.png"
-            excelSheetName="Quarterly Grouped Data"
+            showBarLabels={true}
+            showDataLabels={true}
+            dataLabelPosition="outside"
+            barLabelFontColor="black"
+            excelFileName="Monthly-Grouped-Report.xlsx"
+            chartFileName="Monthly-Grouped-Report.png"
+            excelSheetName="Monthly Grouped Data"
             showTablePanel={true}
             initialSplitPos={80}
+            initialTableWidth={350}
+            tableHeaderClassName="text-center"
             showPagination={true}
             showChartTypeSwitcher={false}
+            disableHighlighting={true}
+            disableSelection={true}
+            chartLayout={{
+              xaxis: {
+                tickangle: -90 // Rotate data labels -90 degrees
+              },
+              legend: {
+                orientation: 'h', // Horizontal legend
+                yanchor: 'bottom',
+                y: -0.3, // Position below the chart
+                xanchor: 'center',
+                x: 0.5 // Center horizontally
+              }
+            }}
           />
         </div>
 
@@ -299,35 +350,51 @@ export default function MonthlyUniquePermitsReport({ data, isLoading }) {
         Monthly Breakdown by Specific Month
       </h3>
       <div id='monthly-breakdown-grid' className="grid grid-cols-2 grid-rows-6 gap-4 border border-gray-200 dark:border-gray-700"> {/* Fixed 2 columns x 6 rows grid layout with outer border */}
-        {monthlyBreakdownChartsData.map(({ monthNum, data: monthData, traces }) => (
-          <div className="border border-gray-200 dark:border-gray-700 p-2" key={`month-chart-${monthNum}`}>
-            <ChartTableComponent
-            data={monthData}
-            columns={singleMonthTrendColumns}
-            isLoading={isLoading}
-            chartTitle={`${monthNames[monthNum - 1]} Permits`}
-            traces={traces} // Use the generated traces
-            barMode="group" // Group the bars
-            barLabelPosition="top"
-            barLabelInsideAnchor="middle"
-            barLabelFontColor="black"
-            barLabelFontSize={10} // Slightly larger font for readability
-            showBarLabels={true} // Explicitly show data labels
-            showTablePanel={false} // Hide table for smaller charts
-            initialSplitPos={100} // Chart only
-            showChartTypeSwitcher={true} // Enable chart type switching
-            hideSplitter={true} // Hide the draggable splitter
-            showTableToggle={false} // Hide the table toggle button
-            chartLayout={{
-              showlegend: false, // Hide the legend
-              yaxis: {
-                range: [0, globalMaxPermitCount], // Set consistent y-axis range
-                fixedrange: true // Prevent zooming on y-axis
-              }
-            }}
-          />
-          </div>
-        ))}
+        {Array.from({ length: 12 }, (_, i) => {
+          const monthNum = i + 1;
+          const monthData = getSingleMonthData(monthNum);
+          return (
+            <div className="border border-gray-200 dark:border-gray-700 p-2" key={`month-chart-${monthNum}`}>
+              <ChartTableComponent id={`chart_monthly_${monthNum}`}
+                data={monthData}
+                columns={singleMonthTrendColumns}
+                isLoading={isLoading}
+                chartTitle={`${monthNames[monthNum - 1]} Permits`}
+                xAxisTitle="Fiscal Year"
+                yAxisTitle="Permit Count"
+                xAccessor="FiscalYear"
+                yAccessor="PermitCount"
+                barMode="group" // Group the bars
+                barLabelPosition="inside" // Position bar labels inside
+                barLabelInsideAnchor="middle" // Center the labels inside bars
+                showBarLabels={true} // Explicitly show data labels (applies to bar charts)
+                initialChartType="line" // Start with line chart - as requested
+                showDataLabels={true} // Show data labels for all chart types
+                showTablePanel={false} // Hide table for smaller charts
+                initialSplitPos={100} // Chart only
+                showChartTypeSwitcher={true} // Enable chart type switching
+                hideSplitter={true} // Hide the draggable splitter
+                showTableToggle={false} // Hide the table toggle button
+                baseBarColor={customPalette[0]} // Use the first color from the palette
+                dataLabelFontColor="black" // For line chart data labels
+                barLabelFontColor="white" // For bar chart data labels
+                chartLayout={{
+                  showlegend: false, // Hide the legend
+                  yaxis: {
+                    range: [0, globalMaxPermitCount], // Set consistent y-axis range
+                    fixedrange: true, // Prevent zooming on y-axis
+                    showgrid: true, // Show horizontal grid lines
+                    gridcolor: 'rgba(200, 200, 200, 0.3)' // Light gray grid lines
+                  },
+                  xaxis: {
+                    showgrid: true, // Show vertical grid lines
+                    gridcolor: 'rgba(200, 200, 200, 0.3)' // Light gray grid lines
+                  }
+                }}
+              />
+            </div>
+          );
+        })}
       </div>
     </div>
   );
