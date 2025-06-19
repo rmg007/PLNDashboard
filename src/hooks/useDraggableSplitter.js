@@ -2,57 +2,55 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'; // Added useCallback
 
-export function useDraggableSplitter(containerRef, initialSplitPos, orientation, onDrag) {
+export function useDraggableSplitter(containerRef, initialSplitPos, orientation) {
     const [splitPos, setSplitPos] = useState(initialSplitPos);
+
+    useEffect(() => {
+        setSplitPos(initialSplitPos);
+    }, [initialSplitPos]);
     const [isDragging, setIsDragging] = useState(false);
-    const animationFrameId = useRef(null);
 
-    // Define onMouseMove and onMouseUp as useCallback to ensure stable references
-    const onMouseMove = useCallback((e) => {
-        if (!containerRef.current || !isDragging) return;
+    const handleMouseDown = useCallback((e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(true);
+    }, []);
 
-        cancelAnimationFrame(animationFrameId.current);
-        animationFrameId.current = requestAnimationFrame(() => {
+    useEffect(() => {
+        const handleMouseMove = (e) => {
+            if (!isDragging || !containerRef.current) return;
+            e.preventDefault();
+
             const { left, top, width, height } = containerRef.current.getBoundingClientRect();
             let newPos;
+
             if (orientation === 'vertical') {
-                // Ensure newPos stays within 20% and 80% bounds
-                newPos = Math.max(20, Math.min(80, ((e.clientX - left) / width) * 100));
+                newPos = ((e.clientX - left) / width) * 100;
             } else {
-                newPos = Math.max(20, Math.min(80, ((e.clientY - top) / height) * 100));
+                newPos = ((e.clientY - top) / height) * 100;
             }
-            setSplitPos(newPos);
-            if (onDrag) onDrag(newPos); // Call the onDrag callback if provided
-        });
-    }, [containerRef, isDragging, orientation, onDrag]); // Dependencies for useCallback
-
-    const onMouseUp = useCallback(() => {
-        setIsDragging(false);
-        // Remove global event listeners after drag ends
-        window.removeEventListener('mousemove', onMouseMove);
-        window.removeEventListener('mouseup', onMouseUp);
-        if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current);
-    }, [onMouseMove]); // Dependency for useCallback
-
-    // The handler that starts the drag operation, now returned from the hook
-    const handleMouseDown = useCallback((e) => {
-        e.preventDefault(); // Prevent default browser drag behavior
-        setIsDragging(true);
-        // Add global event listeners when drag starts
-        window.addEventListener('mousemove', onMouseMove);
-        window.addEventListener('mouseup', onMouseUp);
-    }, [onMouseMove, onMouseUp]); // Dependencies for useCallback
-
-    // Cleanup effect for when the component unmounts or dependencies change
-    useEffect(() => {
-        return () => {
-            // Ensure listeners are removed to prevent memory leaks
-            window.removeEventListener('mousemove', onMouseMove);
-            window.removeEventListener('mouseup', onMouseUp);
-            if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current);
+            
+            setSplitPos(Math.max(10, Math.min(90, newPos)));
         };
-    }, [onMouseMove, onMouseUp]); // Dependencies for cleanup
 
-    // Return the state and handler that the component needs
+        const handleMouseUp = () => {
+            setIsDragging(false);
+        };
+
+        if (isDragging) {
+            document.body.style.cursor = orientation === 'vertical' ? 'col-resize' : 'row-resize';
+            window.addEventListener('mousemove', handleMouseMove);
+            window.addEventListener('mouseup', handleMouseUp);
+        } else {
+            document.body.style.cursor = '';
+        }
+
+        return () => {
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('mouseup', handleMouseUp);
+            document.body.style.cursor = '';
+        };
+    }, [isDragging, containerRef, orientation]);
+
     return { splitPos, isDragging, handleMouseDown };
 }

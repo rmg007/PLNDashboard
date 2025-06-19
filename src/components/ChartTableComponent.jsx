@@ -1,6 +1,6 @@
 // src/components/ChartTableComponent.jsx
 
-import React, { useState, useCallback, useRef, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback, useLayoutEffect } from 'react';
 import { useReactTable, getCoreRowModel, getSortedRowModel, getPaginationRowModel } from '@tanstack/react-table';
 import { useDraggableSplitter } from '../hooks/useDraggableSplitter';
 import * as XLSX from 'xlsx';
@@ -20,7 +20,9 @@ export default function ChartTableComponent(props) {
         showTrendLine = true, showAverageLine = true, hideSplitter = false,
         showBarLabels = false, barLabelPosition = 'outside',
         barLabelInsideAnchor = 'middle', barLabelFontColor = 'black',
-        containerRef: externalContainerRef, showTableToggle = true
+        containerRef: externalContainerRef, showTableToggle = true,
+        initialTableWidth = null, disableHighlighting = false,
+        showLineLabels = false, id, disableSelection = false
     } = props;
 
     // State for tracking highlighted and selected indices
@@ -42,7 +44,19 @@ export default function ChartTableComponent(props) {
     }, []);
 
     // Splitter functionality
-    const { splitPos, isDragging, handleMouseDown } = useDraggableSplitter(containerRef, initialSplitPos, splitterOrientation);
+    const [finalInitialSplit, setFinalInitialSplit] = useState(initialSplitPos);
+
+    useLayoutEffect(() => {
+        if (initialTableWidth && containerRef.current) {
+            const containerWidth = containerRef.current.offsetWidth;
+            if (containerWidth > 0 && splitterOrientation === 'vertical') {
+                const tableWidthPercent = (initialTableWidth / containerWidth) * 100;
+                setFinalInitialSplit(100 - tableWidthPercent);
+            }
+        }
+    }, [initialTableWidth, splitterOrientation]);
+
+    const { splitPos, isDragging, handleMouseDown } = useDraggableSplitter(containerRef, finalInitialSplit, splitterOrientation);
     
     // Table initialization
     const table = useReactTable({
@@ -59,7 +73,24 @@ export default function ChartTableComponent(props) {
     const chartTraces = useMemo(() => {
         if (traces) {
             if (chartType === 'line') {
-                return traces.map(trace => ({ ...trace, type: 'scatter', mode: 'lines+markers' }));
+                return traces.map(trace => {
+                    // For chartPSCActivity or when showLineLabels is true, add text labels to line charts
+                    if (id === 'chartPSCActivity' || showLineLabels) {
+                        return { 
+                            ...trace, 
+                            type: 'scatter', 
+                            mode: 'lines+markers+text',
+                            text: trace.y.map(y => y.toLocaleString()),
+                            textposition: 'top center',
+                            textfont: {
+                                family: 'Arial, sans-serif',
+                                size: 12,
+                                color: document.body.classList.contains('dark') ? '#FFF' : '#333'
+                            }
+                        };
+                    }
+                    return { ...trace, type: 'scatter', mode: 'lines+markers' };
+                });
             }
             return traces;
         }
@@ -106,6 +137,11 @@ export default function ChartTableComponent(props) {
 
     // Handle row selection
     const handleRowSelect = useCallback((index) => {
+        // Skip selection if disableSelection is true or for specific chart IDs
+        if (disableSelection || id === 'chartPSCWeekdayActivity' || id === 'chartPSCWeekdayByDayActivity') {
+            return;
+        }
+        
         setSelectedIndices(prev => {
             const newSet = new Set(prev);
             if (newSet.has(index)) {
@@ -115,13 +151,18 @@ export default function ChartTableComponent(props) {
             }
             return newSet;
         });
-    }, []);
+    }, [disableSelection, id]);
 
     // Handle chart hover events
-    const handleChartHover = useCallback((index, curve) => {
-        setHighlightedIndex(index);
-        setHighlightedCurve(curve);
-    }, []);
+    const handleChartHover = useCallback((data) => {
+        if (disableHighlighting) return;
+        if (!data || !data.points || data.points.length === 0) {
+            setHighlightedIndex(null);
+            return;
+        }
+        const pointIndex = data.points[0].pointIndex;
+        setHighlightedIndex(pointIndex);
+    }, [disableHighlighting]);
 
     // Handle mouse leave events
     const handleLeave = useCallback(() => {
@@ -131,10 +172,11 @@ export default function ChartTableComponent(props) {
 
     // Handle row hover events
     const handleRowHover = useCallback((index) => {
+        if (disableHighlighting) return;
         setHighlightedIndex(index);
         setHighlightedCurve(null);
-    }, []);
-    
+    }, [disableHighlighting]);
+
     // Handle CSV export
     const handleExportCsv = useCallback(() => {
         if (!data || !Array.isArray(data) || data.length === 0) return;
@@ -179,12 +221,21 @@ export default function ChartTableComponent(props) {
             />
             <div 
                 ref={containerRef} 
-                className={`relative flex flex-grow overflow-hidden ${splitterOrientation === 'vertical' ? 'flex-row' : 'flex-col'}`}
-                style={{ minHeight: '450px' }} // Set a consistent minimum height to prevent layout shift
+                className="relative flex flex-grow overflow-hidden"
+                style={{ 
+                    minHeight: '450px',
+                    flexDirection: splitterOrientation === 'vertical' ? 'row' : 'column'
+                }}
             >
+                {/* Chart Panel */}
                 <div 
-                    style={chartPanelStyle} 
-                    className={`h-full relative ${!hideSplitter && 'pr-2'} ${isDragging ? 'pointer-events-none' : ''}`}
+                    style={{ 
+                        [splitterOrientation === 'vertical' ? 'width' : 'height']: !tableVisible || hideSplitter ? '100%' : `${splitPos}%`,
+                        overflow: 'hidden',
+                        display: 'flex',
+                        flexDirection: 'column'
+                    }} 
+                    className="relative flex-shrink-0"
                 >
                     <Chart
                         chartRef={chartRef}
@@ -204,31 +255,43 @@ export default function ChartTableComponent(props) {
                         onSelect={handleRowSelect}
                     />
                 </div>
-                {!hideSplitter && tableVisible && (
-                    <>
-                        <div 
-                            id="splitter" 
-                            onMouseDown={handleMouseDown}
-                            style={{
-                                cursor: splitterOrientation === 'vertical' ? 'col-resize' : 'row-resize',
-                                background: '#e5e7eb',
-                                width: splitterOrientation === 'vertical' ? '4px' : '100%',
-                                height: splitterOrientation === 'vertical' ? '100%' : '4px',
-                            }}
-                            className="flex-shrink-0 hover:bg-blue-300 transition-colors"
+                
+                {/* Splitter - rendered between chart and table */}
+                {tableVisible && !hideSplitter && (
+                    <div 
+                        id="splitter" 
+                        onMouseDown={handleMouseDown}
+                        style={{
+                            cursor: splitterOrientation === 'vertical' ? 'col-resize' : 'row-resize',
+                            background: '#d1d5db', // Use a neutral gray for a subtle look
+                            width: splitterOrientation === 'vertical' ? '10px' : '100%',
+                            height: splitterOrientation === 'vertical' ? '100%' : '10px',
+                            flexShrink: 0,
+                            zIndex: 20,
+                        }}
+                        className="hover:bg-orange-500 transition-colors"
+                    />
+                )}
+                
+                {/* Table Panel */}
+                {tableVisible && !hideSplitter && (
+                    <div 
+                        style={{ 
+                            [splitterOrientation === 'vertical' ? 'width' : 'height']: `${100 - splitPos}%`,
+                            overflow: 'auto'
+                        }} 
+                        className="flex-shrink-0"
+                    >
+                        <Table 
+                            table={table}
+                            highlightedIndex={highlightedIndex}
+                            onRowHover={handleRowHover}
+                            onRowLeave={handleLeave}
+                            selectedIndices={selectedIndices}
+                            onRowSelect={handleRowSelect}
+                            showPagination={showPagination}
                         />
-                        <div style={{ width: `${100 - splitPos}%`, flexShrink: 0 }} className={`h-full ${isDragging ? 'pointer-events-none' : ''}`}>
-                            <Table 
-                                table={table}
-                                highlightedIndex={highlightedIndex}
-                                onRowHover={handleRowHover}
-                                onRowLeave={handleLeave}
-                                selectedIndices={selectedIndices}
-                                onRowSelect={handleRowSelect}
-                                showPagination={showPagination}
-                            />
-                        </div>
-                    </>
+                    </div>
                 )}
             </div>
         </div>

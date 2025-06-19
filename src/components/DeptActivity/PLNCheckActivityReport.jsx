@@ -10,7 +10,12 @@ export default function PLNCheckActivityReport({ data, isLoading }) {
     const { setTitle } = useLayout();
     const [weekdayData, setWeekdayData] = useState([]);
     const [isLoadingWeekdayData, setIsLoadingWeekdayData] = useState(true);
-    const forestGreenPalette = ['#2E7D32', '#4CAF50', '#81C784', '#A5D6A7', '#1B5E20']; // Forest Green Theme
+    const plnCheckPalette = [
+        'rgb(168, 65, 27)', 'rgb(167, 103, 26)', 'rgb(175, 153, 28)',
+        'rgb(93, 173, 12)', 'rgb(42, 170, 106)', 'rgb(0, 110, 146)',
+        'rgba(39, 94, 150, 0.75)', 'rgb(138, 43, 226)', 'rgb(128, 15, 75)',
+        'rgb(199, 21, 133)', 'rgb(220, 20, 60)', 'rgb(75, 0, 130)'
+    ]; // PLN Check Theme - RGB format
     
     // Set the page title when component mounts
     useEffect(() => {
@@ -57,7 +62,7 @@ export default function PLNCheckActivityReport({ data, isLoading }) {
             accessorKey: 'activity_count',
             id: 'activity_count',
             sortingFn: 'basic',
-            cell: info => info.getValue().toLocaleString()
+            cell: info => <div className="text-center">{info.getValue().toLocaleString()}</div>
         }
     ], []);
     
@@ -104,7 +109,7 @@ export default function PLNCheckActivityReport({ data, isLoading }) {
             y: sortedData.map(item => item.activity_count),
             type: 'bar',
             name: 'PLN Check Activity',
-            marker: { color: forestGreenPalette[0] }, // Use first color of Forest Green Theme
+            marker: { color: plnCheckPalette[0] }, // Use first color of Forest Green Theme
             text: sortedData.map(item => item.activity_count.toLocaleString()),
             textposition: 'inside',
             insidetextanchor: 'middle',
@@ -114,7 +119,7 @@ export default function PLNCheckActivityReport({ data, isLoading }) {
             },
             hovertemplate: '<b>Year: %{x}</b><br>Activity Count: %{y:,}<extra></extra>'
         }];
-    }, [data, forestGreenPalette]);
+    }, [data, plnCheckPalette]);
     
     // Create traces for the weekday chart (grouped by year)
     const weekdayTraces = useMemo(() => {
@@ -128,7 +133,7 @@ export default function PLNCheckActivityReport({ data, isLoading }) {
         
         // Create a trace for each weekday
         const weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
-        // Theme 5: Ocean & Cool - Replaced by forestGreenPalette
+        // Theme 5: Ocean & Cool - Replaced by plnCheckPalette
         // const colors = ['#03045e', '#0077b6', '#00b4d8', '#48cae4', '#90e0ef'];
         const weekdayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
         
@@ -137,7 +142,7 @@ export default function PLNCheckActivityReport({ data, isLoading }) {
             y: sortedData.map(item => item[day]), // Keep as decimal for Plotly
             type: 'bar',
             name: weekdayLabels[index],
-            marker: { color: forestGreenPalette[index % forestGreenPalette.length] },
+            marker: { color: plnCheckPalette[index % plnCheckPalette.length] },
             text: sortedData.map(item => `${(item[day] * 100).toFixed(1)}%`),
             textposition: 'inside',
             insidetextanchor: 'middle',
@@ -148,7 +153,7 @@ export default function PLNCheckActivityReport({ data, isLoading }) {
             },
             hovertemplate: '<b>Year: %{x}</b><br>' + weekdayLabels[index] + ': %{text}<extra></extra>'
         }));
-    }, [weekdayData, forestGreenPalette]);
+    }, [weekdayData, plnCheckPalette]);
     
     // Create traces for the weekday chart (grouped by day)
     const weekdayByDayTraces = useMemo(() => {
@@ -172,7 +177,7 @@ export default function PLNCheckActivityReport({ data, isLoading }) {
             ],
             type: 'bar',
             name: `${yearData.year}`,
-            marker: { color: forestGreenPalette[index % forestGreenPalette.length] },
+            marker: { color: plnCheckPalette[index % plnCheckPalette.length] },
             text: [
                 `${(yearData.monday * 100).toFixed(1)}%`,
                 `${(yearData.tuesday * 100).toFixed(1)}%`,
@@ -189,7 +194,7 @@ export default function PLNCheckActivityReport({ data, isLoading }) {
             },
             hovertemplate: '<b>%{x}</b><br>Year: ' + yearData.year + '<br>Percentage: %{text}<extra></extra>'
         }));
-    }, [weekdayData, forestGreenPalette]);
+    }, [weekdayData, plnCheckPalette]);
     
     // Define columns for the weekday by day table
     const weekdayByDayColumns = useMemo(() => [
@@ -224,6 +229,7 @@ export default function PLNCheckActivityReport({ data, isLoading }) {
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
                 <ChartTableComponent 
                     id='chartPLNCheckActivity'
+                    initialTableWidth={250}
                     data={Array.isArray(data) ? data : []}
                     columns={columns}
                     isLoading={isLoading}
@@ -245,6 +251,7 @@ export default function PLNCheckActivityReport({ data, isLoading }) {
                     showPagination={false}
                     showChartTypeSwitcher={true}
                     chartType="bar"
+                    showLineLabels={true}
                 />
             </div>
             
@@ -268,9 +275,12 @@ export default function PLNCheckActivityReport({ data, isLoading }) {
                     chartFileName="PLNCheckWeekdayActivityReport.png"
                     excelSheetName="PLN Check Weekday Activity"
                     showTablePanel={true}
-                    initialSplitPos={70}
+                    splitterOrientation="horizontal"
+                    initialSplitPos={60}
                     showPagination={false}
                     showChartTypeSwitcher={false}
+                    disableHighlighting={true}
+                    disableSelection={true}
                     chartType="bar"
                     chartLayout={{
                         barmode: 'group',
@@ -306,9 +316,12 @@ export default function PLNCheckActivityReport({ data, isLoading }) {
                     chartFileName="PLNCheckWeekdayByDayActivityReport.png"
                     excelSheetName="PLN Check Weekday By Day Activity"
                     showTablePanel={true}
-                    initialSplitPos={70}
+                    splitterOrientation="horizontal"
+                    initialSplitPos={60}
                     showPagination={false}
                     showChartTypeSwitcher={false}
+                    disableHighlighting={true}
+                    disableSelection={true}
                     chartType="bar"
                     chartLayout={{
                         barmode: 'group',

@@ -10,7 +10,12 @@ export default function LUActivityReport({ data, isLoading }) {
     const { setTitle } = useLayout();
     const [weekdayData, setWeekdayData] = useState([]);
     const [isLoadingWeekdayData, setIsLoadingWeekdayData] = useState(true);
-    const sunsetOrangePalette = ['#FF6700', '#FF8C42', '#FFB370', '#E55B00', '#A94300']; // Sunset Orange Theme
+    const luPalette = [
+        'rgb(75, 150, 125)', 'rgb(122, 137, 156)', 'rgb(95, 163, 95)',
+        'rgb(92, 105, 117)', 'rgb(101, 155, 177)', 'rgb(72, 209, 204)',
+        'rgb(95, 158, 160)', 'rgb(70, 130, 180)', 'rgb(100, 149, 237)',
+        'rgb(125, 159, 163)', 'rgb(0, 206, 209)', 'rgb(32, 178, 170)'
+    ]; // LU Theme - RGB format
     
     // Set the page title when component mounts
     useEffect(() => {
@@ -45,14 +50,20 @@ export default function LUActivityReport({ data, isLoading }) {
     console.log('LUActivityReport - weekdayData:', weekdayData);
     // Define columns for the activity table using modern v8 syntax
     const columns = useMemo(() => [
-        columnHelper.accessor('year', {
-            header: 'Year',
-            cell: info => info.getValue()
-        }),
-        columnHelper.accessor('activity_count', {
-            header: 'Activity Count',
-            cell: info => info.getValue().toLocaleString()
-        })
+        {
+            header: () => <div className="text-center">Year</div>,
+            accessorKey: 'year',
+            id: 'year',
+            sortingFn: 'basic',
+            cell: info => <div className="text-center">{info.getValue()}</div>
+        },
+        {
+            header: () => <div className="text-center">Activity Count</div>,
+            accessorKey: 'activity_count',
+            id: 'activity_count',
+            sortingFn: 'basic',
+            cell: info => <div className="text-center">{info.getValue().toLocaleString()}</div>
+        }
     ], []);
     
     // Define columns for the weekday table
@@ -99,7 +110,7 @@ export default function LUActivityReport({ data, isLoading }) {
             y: sortedData.map(item => item.activity_count),
             type: 'bar',
             name: 'LU Activity',
-            marker: { color: sunsetOrangePalette[0] }, // Use first color of Sunset Orange Theme
+            marker: { color: luPalette[0] }, // Use first color of Sunset Orange Theme
             text: sortedData.map(item => item.activity_count.toLocaleString()),
             textposition: 'inside',
             insidetextanchor: 'middle',
@@ -109,7 +120,7 @@ export default function LUActivityReport({ data, isLoading }) {
             },
             hovertemplate: '<b>Year: %{x}</b><br>Activity Count: %{y:,}<extra></extra>'
         }];
-    }, [data, sunsetOrangePalette]);
+    }, [data, luPalette]);
     
     // Create traces for the weekday chart
     const weekdayTraces = useMemo(() => {
@@ -123,7 +134,7 @@ export default function LUActivityReport({ data, isLoading }) {
         
         // Create a trace for each weekday
         const weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
-        // Theme 5: Ocean & Cool - Replaced by sunsetOrangePalette
+        // Theme 5: Ocean & Cool - Replaced by luPalette
         // const colors = ['#03045e', '#0077b6', '#00b4d8', '#48cae4', '#90e0ef'];
         const weekdayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
         
@@ -132,7 +143,7 @@ export default function LUActivityReport({ data, isLoading }) {
             y: sortedData.map(item => item[day]), // Keep as decimal for Plotly
             type: 'bar',
             name: weekdayLabels[index],
-            marker: { color: sunsetOrangePalette[index % sunsetOrangePalette.length] },
+            marker: { color: luPalette[index % luPalette.length] },
             text: sortedData.map(item => `${(item[day] * 100).toFixed(1)}%`),
             textposition: 'inside',
             insidetextanchor: 'middle',
@@ -143,7 +154,7 @@ export default function LUActivityReport({ data, isLoading }) {
             },
             hovertemplate: '<b>Year: %{x}</b><br>' + weekdayLabels[index] + ': %{text}<extra></extra>'
         }));
-    }, [weekdayData, sunsetOrangePalette]);
+    }, [weekdayData, luPalette]);
     
     // Create traces for the weekday chart (grouped by day)
     const weekdayByDayTraces = useMemo(() => {
@@ -167,7 +178,7 @@ export default function LUActivityReport({ data, isLoading }) {
             ],
             type: 'bar',
             name: `${yearData.year}`,
-            marker: { color: sunsetOrangePalette[index % sunsetOrangePalette.length] },
+            marker: { color: luPalette[index % luPalette.length] },
             text: [
                 `${(yearData.monday * 100).toFixed(1)}%`,
                 `${(yearData.tuesday * 100).toFixed(1)}%`,
@@ -184,7 +195,7 @@ export default function LUActivityReport({ data, isLoading }) {
             },
             hovertemplate: '<b>%{x}</b><br>Year: ' + yearData.year + '<br>Percentage: %{text}<extra></extra>'
         }));
-    }, [weekdayData, sunsetOrangePalette]);
+    }, [weekdayData, luPalette]);
     
     // Define columns for the weekday by day table
     const weekdayByDayColumns = useMemo(() => [
@@ -219,6 +230,7 @@ export default function LUActivityReport({ data, isLoading }) {
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
                 <ChartTableComponent 
                     id='chartLUActivity'
+                    initialTableWidth={250}
                     data={Array.isArray(data) ? data : []}
                     columns={columns}
                     isLoading={isLoading}
@@ -240,6 +252,7 @@ export default function LUActivityReport({ data, isLoading }) {
                     showPagination={false}
                     showChartTypeSwitcher={true}
                     chartType="bar"
+                    showLineLabels={true}
                 />
             </div>
             
@@ -263,9 +276,12 @@ export default function LUActivityReport({ data, isLoading }) {
                     chartFileName="LUWeekdayActivityReport.png"
                     excelSheetName="LU Weekday Activity"
                     showTablePanel={true}
-                    initialSplitPos={70}
+                    splitterOrientation="horizontal"
+                    initialSplitPos={60}
                     showPagination={false}
                     showChartTypeSwitcher={false}
+                    disableHighlighting={true}
+                    disableSelection={true}
                     chartType="bar"
                     chartLayout={{
                         barmode: 'group',
@@ -301,9 +317,12 @@ export default function LUActivityReport({ data, isLoading }) {
                     chartFileName="LUWeekdayByDayActivityReport.png"
                     excelSheetName="LU Weekday By Day Activity"
                     showTablePanel={true}
-                    initialSplitPos={70}
+                    splitterOrientation="horizontal"
+                    initialSplitPos={60}
                     showPagination={false}
                     showChartTypeSwitcher={false}
+                    disableHighlighting={true}
+                    disableSelection={true}
                     chartType="bar"
                     chartLayout={{
                         barmode: 'group',

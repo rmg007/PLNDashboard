@@ -10,7 +10,12 @@ export default function PSCActivityReport({ data, isLoading }) {
     const { setTitle } = useLayout();
     const [weekdayData, setWeekdayData] = useState([]);
     const [isLoadingWeekdayData, setIsLoadingWeekdayData] = useState(true);
-    const royalPurplePalette = ['#6A0DAD', '#9370DB', '#B39DDB', '#D1C4E9', '#4A148C']; // Royal Purple Theme
+    const pscColorPalette = [
+        'rgb(14, 50, 148)', 'rgb(122, 125, 129)', 'rgb(5, 100, 5)',
+        'rgb(37, 44, 51)', 'rgb(7, 104, 143)', 'rgb(49, 136, 133)',
+        'rgb(95, 158, 160)', 'rgb(70, 130, 180)', 'rgb(100, 149, 237)',
+        'rgb(176, 224, 230)', 'rgb(7, 75, 77)', 'rgb(34, 88, 86)'
+    ]; // PSC Theme - Aqua/Teal/Blue palette
     
     // Set the page title when component mounts
     useEffect(() => {
@@ -46,18 +51,18 @@ export default function PSCActivityReport({ data, isLoading }) {
     // Define columns for the activity table using modern @tanstack/react-table v8 syntax
     const columns = useMemo(() => [
         {
-            header: 'Year',
+            header: () => <div className="text-center">Year</div>,
             accessorKey: 'year',
             id: 'year',
             sortingFn: 'basic',
-            cell: info => info.getValue()
+            cell: info => <div className="text-center">{info.getValue()}</div>
         },
         {
-            header: 'Activity Count',
+            header: () => <div className="text-center">Activity Count</div>,
             accessorKey: 'activity_count',
             id: 'activity_count',
             sortingFn: 'basic',
-            cell: info => info.getValue().toLocaleString()
+            cell: info => <div className="text-center">{info.getValue().toLocaleString()}</div>
         }
     ], []);
     
@@ -104,7 +109,7 @@ export default function PSCActivityReport({ data, isLoading }) {
             y: sortedData.map(item => item.activity_count),
             type: 'bar',
             name: 'PSC Activity',
-            marker: { color: royalPurplePalette[0] },
+            marker: { color: pscColorPalette[0] },
             text: sortedData.map(item => item.activity_count.toLocaleString()),
             textposition: 'inside',
             insidetextanchor: 'middle',
@@ -114,7 +119,7 @@ export default function PSCActivityReport({ data, isLoading }) {
             },
             hovertemplate: '<b>Year: %{x}</b><br>Activity Count: %{y:,}<extra></extra>'
         }];
-    }, [data, royalPurplePalette]);
+    }, [data, pscColorPalette]);
     
     // Create traces for the weekday chart (grouped by year)
     const weekdayTraces = useMemo(() => {
@@ -137,7 +142,7 @@ export default function PSCActivityReport({ data, isLoading }) {
             y: sortedData.map(item => item[day]), // Keep as decimal for Plotly
             type: 'bar',
             name: weekdayLabels[index],
-            marker: { color: royalPurplePalette[index % royalPurplePalette.length] },
+            marker: { color: pscColorPalette[index % pscColorPalette.length] },
             text: sortedData.map(item => `${(item[day] * 100).toFixed(1)}%`),
             textposition: 'inside',
             insidetextanchor: 'middle',
@@ -148,7 +153,7 @@ export default function PSCActivityReport({ data, isLoading }) {
             },
             hovertemplate: '<b>Year: %{x}</b><br>' + weekdayLabels[index] + ': %{text}<extra></extra>'
         }));
-    }, [weekdayData, royalPurplePalette]);
+    }, [weekdayData, pscColorPalette]);
     
     // Create traces for the weekday chart (grouped by day)
     const weekdayByDayTraces = useMemo(() => {
@@ -172,7 +177,7 @@ export default function PSCActivityReport({ data, isLoading }) {
             ],
             type: 'bar',
             name: `${yearData.year}`,
-            marker: { color: royalPurplePalette[index % royalPurplePalette.length] },
+            marker: { color: pscColorPalette[index % pscColorPalette.length] },
             text: [
                 `${(yearData.monday * 100).toFixed(1)}%`,
                 `${(yearData.tuesday * 100).toFixed(1)}%`,
@@ -189,7 +194,7 @@ export default function PSCActivityReport({ data, isLoading }) {
             },
             hovertemplate: '<b>%{x}</b><br>Year: ' + yearData.year + '<br>Percentage: %{text}<extra></extra>'
         }));
-    }, [weekdayData, royalPurplePalette]);
+    }, [weekdayData, pscColorPalette]);
     
     // Define columns for the weekday by day table
     const weekdayByDayColumns = useMemo(() => [
@@ -224,6 +229,7 @@ export default function PSCActivityReport({ data, isLoading }) {
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
                 <ChartTableComponent 
                     id='chartPSCActivity'
+                    initialTableWidth={250}
                     data={Array.isArray(data) ? data : []}
                     columns={columns}
                     isLoading={isLoading}
@@ -268,9 +274,11 @@ export default function PSCActivityReport({ data, isLoading }) {
                     chartFileName="PSCWeekdayActivityReport.png"
                     excelSheetName="PSC Weekday Activity"
                     showTablePanel={true}
-                    initialSplitPos={70}
+                    splitterOrientation="horizontal"
+                    initialSplitPos={60}
                     showPagination={false}
                     showChartTypeSwitcher={false}
+                    disableHighlighting={true}
                     chartType="bar"
                     chartLayout={{
                         barmode: 'group',
@@ -306,9 +314,11 @@ export default function PSCActivityReport({ data, isLoading }) {
                     chartFileName="PSCWeekdayByDayActivityReport.png"
                     excelSheetName="PSC Weekday By Day Activity"
                     showTablePanel={true}
-                    initialSplitPos={70}
+                    splitterOrientation="horizontal"
+                    initialSplitPos={60}
                     showPagination={false}
                     showChartTypeSwitcher={false}
+                    disableHighlighting={true}
                     chartType="bar"
                     chartLayout={{
                         barmode: 'group',

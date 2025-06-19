@@ -4,6 +4,7 @@ import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout.jsx';
 import Home from './pages/Home.jsx';
 import UniquePermits from './pages/UniquePermits.jsx';
+import DeptActivity from './pages/DeptActivity.jsx';
 
 export default function App() {
   return (
@@ -12,6 +13,7 @@ export default function App() {
         <Route path="/" element={<Layout />}>
           <Route index element={<Home />} />
           <Route path="uniquepermits" element={<UniquePermits />} />
+          <Route path="deptactivity" element={<DeptActivity />} />
         </Route>
       </Routes>
     </Router>
@@ -45,330 +47,225 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 
 
 // ===== C:\Users\mhali\OneDrive\Documents\NewDashboard\my-dashboard\src\components\ChartTableComponent.jsx =====
-/* ───────────────────────── ChartTableComponent.jsx ───────────────────────── */
-import {
-    useEffect,
-    useRef,
-    useState,
-    useMemo,
-    useCallback,
-  } from 'react'
-  import Plotly from 'plotly.js-dist-min'
-  import * as XLSX from 'xlsx/xlsx.mjs'
-  
-  import { PiMicrosoftExcelLogoDuotone } from 'react-icons/pi'
-  import { VscGraphLine } from 'react-icons/vsc'
-  import { BsBarChartFill } from 'react-icons/bs'
-  import { RiLoader5Fill } from 'react-icons/ri'
-  
-  import {
-    useReactTable,
-    getCoreRowModel,
-    getSortedRowModel,
-    getPaginationRowModel,
-    flexRender,
-  } from '@tanstack/react-table'
-  
-  /* ───────────────── helpers you already had ───────────────── */
-  const calcLR = (d, x, y) => {
-    if (d.length < 2) return []
-    const n = d.length
-    let Σx = 0,
-      Σy = 0,
-      Σxy = 0,
-      Σxx = 0
-    d.forEach(v => {
-      Σx += v[x]
-      Σy += v[y]
-      Σxy += v[x] * v[y]
-      Σxx += v[x] * v[x]
-    })
-    const m = (n * Σxy - Σx * Σy) / (n * Σxx - Σx ** 2)
-    const b = (Σy - m * Σx) / n
-    const minX = Math.min(...d.map(v => v[x]))
-    const maxX = Math.max(...d.map(v => v[x]))
-    return [
-      { x: minX, y: m * minX + b },
-      { x: maxX, y: m * maxX + b },
-    ]
-  }
-  const calcAvg = (d, y) =>
-    d.length ? d.reduce((s, v) => s + v[y], 0) / d.length : 0
-  
-  /* ───────────────── DEFAULT_PROPS MUST BE *ABOVE* component ───────────────── */
-  const DEFAULT_PROPS = {
-    /* titles */
-    chartTitle: 'Report',
-    xAxisTitle: 'Category',
-    yAxisTitle: 'Value',
-  
-    /* accessors */
-    xAccessor: 'x',
-    yAccessor: 'y',
-    yAxisTickFormat: ',d',
-  
-    /* initial chart style */
-    chartType: 'bar', // 'bar' | 'line'  (will be toggled)
-  
-    /* styling */
-    baseBarColor: 'teal',
-    highlightBarColor: 'orange',
-  
-    /* UI */
-    splitterOrientation: 'vertical',
-    initialSplitPos: 70,
-  
-    showChartPanel: true,
-    showTablePanel: true,
-  }
-  
-  /* ───────────────────────────────── component ─────────────────────────────── */
-  export default function ChartTableComponent({
-    /* required props */
-    data,
-    columns,
-  
-    /* optional (everything else falls back to DEFAULT_PROPS) */
-    chartType = DEFAULT_PROPS.chartType,
-    chartTitle = DEFAULT_PROPS.chartTitle,
-    xAxisTitle = DEFAULT_PROPS.xAxisTitle,
-    yAxisTitle = DEFAULT_PROPS.yAxisTitle,
-    xAccessor = DEFAULT_PROPS.xAccessor,
-    yAccessor = DEFAULT_PROPS.yAccessor,
-  
-    splitterOrientation = DEFAULT_PROPS.splitterOrientation,
-    initialSplitPos = DEFAULT_PROPS.initialSplitPos,
-    showChartPanel = DEFAULT_PROPS.showChartPanel,
-    showTablePanel = DEFAULT_PROPS.showTablePanel,
-  
-    baseBarColor = DEFAULT_PROPS.baseBarColor,
-    highlightBarColor = DEFAULT_PROPS.highlightBarColor,
-  }) {
-    /* ───── refs & state ───── */
-    const chartRef = useRef(null)
-    const chartWrapRef = useRef(null)
-    const [chartStyle, setChartStyle] = useState(chartType) // bar | line
-    const [splitPos, setSplitPos] = useState(initialSplitPos)
-    const [sorting, setSorting] = useState([])
-    const [rowSelection, setRowSelection] = useState({})
-  
-    /* ───── table (tanstack) ───── */
-    const table = useReactTable({
-      data,
-      columns,
-      state: { sorting, rowSelection },
-      onSortingChange: setSorting,
-      onRowSelectionChange: setRowSelection,
-      getCoreRowModel: getCoreRowModel(),
-      getSortedRowModel: getSortedRowModel(),
-      getPaginationRowModel: getPaginationRowModel(),
-    })
-    const visRows = table.getRowModel().rows
-    const chartData = useMemo(() => visRows.map(r => r.original), [visRows])
-    const selectedIdx = useMemo(
-      () =>
-        visRows
-          .map((r, i) => (rowSelection[r.id] ? i : -1))
-          .filter(i => i >= 0),
-      [rowSelection, visRows],
-    )
-  
-    /* ───── draw / update Plotly ───── */
-    const drawChart = useCallback(() => {
-      if (!chartWrapRef.current || !chartRef.current) return
-      const xs = chartData.map(d => d[xAccessor])
-      const ys = chartData.map(d => d[yAccessor])
-  
-      const mainTrace =
-        chartStyle === 'bar'
-          ? {
-              type: 'bar',
-              x: xs,
-              y: ys,
-              marker: {
-                color: ys.map((_, i) =>
-                  selectedIdx.includes(i) ? highlightBarColor : baseBarColor,
-                ),
-              },
+// ===== C:\Users\mhali\OneDrive\Documents\NewDashboard\my-dashboard\src\components\ChartTableComponent\useChartTableLogic.jsx =====
+// src/components/ChartTableComponent.jsx
+
+import React, { useState, useCallback } from 'react';
+import { useChartTableLogic } from '../hooks/useChartTableLogic';
+import Toolbar from './ChartTableComponent/Toolbar';
+import Chart from './ChartTableComponent/Chart';
+import Table from './ChartTableComponent/Table';
+
+// This component will now always display a split view with Chart on the left and Table on the right.
+export default function ChartTableComponent(props) {
+    const {
+        data,
+        columns,
+        chartTitle,
+        xAxisTitle,
+        yAxisTitle,
+        xAccessor,
+        yAccessor,
+        splitterOrientation = 'vertical', // Ensures a vertical split (left/right)
+        initialSplitPos = 70,              // Sets initial Chart width to 70%, Table to 30%
+        baseBarColor,
+        highlightBarColor,
+        traces,
+        barMode,
+        chartType: propChartType = 'bar',  // Set default value for chartType
+        xAxisType = 'category',
+        showPagination, // Add showPagination prop
+        showChartTypeSwitcher = true, // Default to showing chart type switcher
+        xAxisTickAngle, // Add xAxisTickAngle prop
+        chartLayout = {}, // Custom chart layout overrides
+        hideSplitter = false, // Option to hide the splitter completely
+        showTrendLine = true, // Default to showing trend line
+        showAverageLine = true // Default to showing average line
+    } = props;
+
+    // State for tracking highlighted and selected indices
+    const [highlightedIndex, setHighlightedIndex] = useState(null);
+    const [highlightedCurve, setHighlightedCurve] = useState(null);
+    const [selectedIndices, setSelectedIndices] = useState(new Set());
+
+    // Handle row selection with useCallback for stability
+    const handleRowSelect = useCallback((index, isDoubleClick = false) => {
+        setSelectedIndices(prev => {
+            const newSelection = new Set(prev);
+            if (isDoubleClick) {
+                // Double click: unselect if selected
+                if (newSelection.has(index)) {
+                    newSelection.delete(index);
+                }
+            } else {
+                // Single click: toggle selection
+                if (newSelection.has(index)) {
+                    newSelection.delete(index);
+                } else {
+                    newSelection.add(index);
+                }
             }
-          : {
-              type: 'scatter',
-              mode: 'lines+markers',
-              x: xs,
-              y: ys,
-              line: { color: baseBarColor },
-            }
-  
-      const { offsetWidth: W, offsetHeight: H } = chartWrapRef.current
-      Plotly.react(
-        chartRef.current,
-        [mainTrace],
-        {
-          xaxis: { title: xAxisTitle },
-          yaxis: { title: yAxisTitle, tickformat: ',d' },
-          width: W,
-          height: H,
-          margin: { t: 32, l: 60, r: 20, b: 40 },
-        },
-        { responsive: true, displaylogo: false },
-      )
-    }, [
-      chartData,
-      chartStyle,
-      xAccessor,
-      yAccessor,
-      xAxisTitle,
-      yAxisTitle,
-      baseBarColor,
-      highlightBarColor,
-      selectedIdx,
-    ])
-  
-    useEffect(drawChart, [drawChart])
-  
-    /* ───── toggle button handler ───── */
-    const handleToggle = () =>
-      setChartStyle(s => (s === 'bar' ? 'line' : 'bar'))
-  
-    /* ───── export helpers (simple) ───── */
-    const downloadExcel = () => {
-      const ws = XLSX.utils.json_to_sheet(data)
-      const wb = XLSX.utils.book_new()
-      XLSX.utils.book_append_sheet(wb, ws, 'Data')
-      XLSX.writeFile(wb, 'report.xlsx')
+            return newSelection;
+        });
+    }, []);
+
+    // Clear selection when clicking on the chart background
+    const handleChartBackgroundClick = useCallback(() => {
+        setSelectedIndices(new Set());
+    }, []);
+
+    // Handle hover on chart points with useCallback for stability
+    const handleChartHover = useCallback((index, curveNumber) => {
+        console.log('ChartTableComponent hover handler called with:', { index, curveNumber });
+        // Directly update state with the latest values
+        setHighlightedIndex(index);
+        setHighlightedCurve(curveNumber);
+    }, []);
+
+    // The useChartTableLogic hook provides the necessary state and handlers
+    console.log('ChartTableComponent - data:', data);
+    console.log('ChartTableComponent - columns:', columns);
+    console.log('ChartTableComponent - data type:', Array.isArray(data) ? 'Array' : typeof data);
+    console.log('ChartTableComponent - data length:', Array.isArray(data) ? data.length : 'N/A');
+    
+    const {
+        chartType = propChartType,
+        setChartType,
+        table,
+        chartTraces,
+        chartRef,
+        handleExportCsv,
+        handleExportPng,
+        refreshChart, // Add refreshChart function to explicitly refresh the chart
+        // These are crucial for the draggable splitter functionality:
+        containerRef,  // Ref for the parent container of the split panels
+        splitPos,      // Current position of the splitter (percentage)
+        isDragging,    // Boolean indicating if the splitter is being dragged
+        handleMouseDown // Function to start the drag operation
+    } = useChartTableLogic({
+        data,
+        columns,
+        initialTraces: traces,
+        xAccessor,
+        yAccessor,
+        yAxisTitle,
+        baseBarColor,
+        highlightBarColor,
+        splitterOrientation,
+        initialSplitPos,
+        chartType: propChartType, // Pass down the propChartType
+        chartTitle,
+        barMode,
+        xAxisType, // Pass xAxisType to the hook
+        showTrendLine, // Pass showTrendLine to the hook
+        showAverageLine // Pass showAverageLine to the hook
+    });
+
+    // Calculate dynamic styles for the chart, table, and splitter based on splitPos
+    const chartPanelStyle = {};
+    const tablePanelStyle = {};
+    const splitterStyle = {};
+
+    if (splitterOrientation === 'vertical') {
+        chartPanelStyle.width = `${splitPos}%`;
+        chartPanelStyle.flexShrink = 0; // Prevent chart panel from shrinking
+        tablePanelStyle.width = `${100 - splitPos}%`;
+        tablePanelStyle.flexShrink = 0; // Prevent table panel from shrinking
+        splitterStyle.left = `${splitPos}%`;
+        splitterStyle.cursor = 'col-resize'; // Cursor for vertical resizing
+    } else { // Fallback for horizontal splitter, though you specified vertical
+        chartPanelStyle.height = `${splitPos}%`;
+        chartPanelStyle.flexShrink = 0;
+        tablePanelStyle.height = `${100 - splitPos}%`;
+        tablePanelStyle.flexShrink = 0;
+        splitterStyle.top = `${splitPos}%`;
+        splitterStyle.cursor = 'row-resize'; // Cursor for horizontal resizing
     }
-    const downloadPNG = () =>
-      Plotly.downloadImage(chartRef.current, {
-        format: 'png',
-        filename: 'chart',
-      })
-  
-    /* ───── render ───── */
+
+    // Class to disable pointer events on content during dragging for smoother resizing
+    const disabledPointerEventsClass = isDragging ? 'pointer-events-none' : '';
+
     return (
-      <div className="w-full h-full flex flex-col bg-white dark:bg-gray-800/50 p-4 rounded shadow">
-        {/* header / toolbar */}
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
-            {chartTitle}
-          </h2>
-          <div className="flex gap-2">
-            <button
-              onClick={downloadExcel}
-              className="w-8 h-8 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center"
-              title="Download .xlsx"
+        <div className="w-full h-full flex flex-col" id='chart-table-container'>
+            <Toolbar
+                chartType={chartType}
+                setChartType={setChartType}
+                onExportCsv={handleExportCsv}
+                onExportPng={handleExportPng}
+                showChartTypeSwitcher={showChartTypeSwitcher}
+            />
+
+            {/* Main container for the chart, splitter, and table panels */}
+            {/* 'flex-row' for vertical splitter (left/right layout) */}
+            <div
+                ref={containerRef} // Attach the ref from the hook for splitter calculations
+                className={`relative flex flex-grow overflow-hidden ${splitterOrientation === 'vertical' ? 'flex-row' : 'flex-col'}`}
             >
-              <PiMicrosoftExcelLogoDuotone className="w-5 h-5" />
-            </button>
-            <button
-              onClick={downloadPNG}
-              className="w-8 h-8 bg-blue-500 hover:bg-blue-600 text-white rounded-full flex items-center justify-center"
-              title="Download chart image"
-            >
-              <VscGraphLine className="w-5 h-5" />
-            </button>
-            <button
-              onClick={handleToggle}
-              className={`w-8 h-8 rounded-full flex items-center justify-center text-white
-                ${
-                  chartStyle === 'bar'
-                    ? 'bg-purple-500 hover:bg-purple-600'
-                    : 'bg-yellow-500 hover:bg-yellow-600'
-                }`}
-              title={`Switch to ${chartStyle === 'bar' ? 'Line' : 'Bar'} chart`}
-            >
-              {chartStyle === 'bar' ? (
-                <VscGraphLine className="w-5 h-5" />
-              ) : (
-                <BsBarChartFill className="w-4 h-4" />
-              )}
-            </button>
-          </div>
-        </div>
-  
-        {/* content */}
-        <div className="flex-1 flex flex-col gap-4 overflow-hidden">
-          {/* chart */}
-          {showChartPanel && (
-            <div ref={chartWrapRef} className="h-64 w-full">
-              <div ref={chartRef} className="w-full h-full" />
-            </div>
-          )}
-  
-          {/* table */}
-          {showTablePanel && (
-            <div className="overflow-auto flex-1">
-              <table className="min-w-full text-sm">
-                <thead className="bg-gray-100 dark:bg-gray-700">
-                  {table.getHeaderGroups().map(hg => (
-                    <tr key={hg.id}>
-                      {hg.headers.map(h => (
-                        <th
-                          key={h.id}
-                          onClick={h.column.getToggleSortingHandler()}
-                          className="px-3 py-2 cursor-pointer text-left"
-                        >
-                          {flexRender(
-                            h.column.columnDef.header,
-                            h.getContext(),
-                          )}
-                          {{
-                            asc: ' ↑',
-                            desc: ' ↓',
-                          }[h.column.getIsSorted()] ?? null}
-                        </th>
-                      ))}
-                    </tr>
-                  ))}
-                </thead>
-                <tbody>
-                  {table.getRowModel().rows.map(r => (
-                    <tr
-                      key={r.id}
-                      className="border-b hover:bg-gray-50 dark:hover:bg-gray-700"
-                    >
-                      {r.getVisibleCells().map(c => (
-                        <td key={c.id} className="px-3 py-1">
-                          {flexRender(
-                            c.column.columnDef.cell,
-                            c.getContext(),
-                          )}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-  
-              {/* simple pager */}
-              {table.getPageCount() > 1 && (
-                <div className="flex gap-2 justify-end items-center mt-3">
-                  <button
-                    onClick={() => table.previousPage()}
-                    disabled={!table.getCanPreviousPage()}
-                    className="px-3 py-1 border rounded disabled:opacity-50"
-                  >
-                    Prev
-                  </button>
-                  <span>
-                    Page {table.getState().pagination.pageIndex + 1} /
-                    {table.getPageCount()}
-                  </span>
-                  <button
-                    onClick={() => table.nextPage()}
-                    disabled={!table.getCanNextPage()}
-                    className="px-3 py-1 border rounded disabled:opacity-50"
-                  >
-                    Next
-                  </button>
+                {/* Left Panel: The Chart */}
+                <div 
+                    style={chartPanelStyle} 
+                    className={`h-full ${splitterOrientation === 'vertical' ? 'pr-2' : 'pb-2'} ${disabledPointerEventsClass} w-full relative`}
+                    onClick={handleChartBackgroundClick}
+                >
+                    <Chart
+                            chartRef={chartRef}
+                            traces={chartTraces}
+                            layout={{
+                                xaxis: { title: xAxisTitle, type: xAxisType },
+                                yaxis: { title: yAxisTitle, tickformat: ',d' },
+                                clickmode: 'event+select',
+                                dragmode: 'select',
+                                ...chartLayout // Spread custom layout overrides
+                            }}
+                            barMode={barMode}
+                            chartTitle={chartTitle} // This will now be used for the chart title
+                            splitPos={splitPos}
+                            splitterOrientation={splitterOrientation}
+                            highlightedIndex={highlightedIndex}
+                            highlightedCurve={highlightedCurve}
+                            selectedIndices={Array.from(selectedIndices)}
+                            xAxisTickAngle={xAxisTickAngle}
+                            onHover={handleChartHover}
+                            onLeave={() => {
+                                setHighlightedIndex(null);
+                                setHighlightedCurve(null);
+                            }}
+                            onSelect={handleRowSelect}
+                        />
                 </div>
-              )}
+
+                {/* The Draggable Splitter Element - Only shown if hideSplitter is false */}
+                {!hideSplitter && (
+                    <div
+                        id="splitter"
+                        className="absolute bg-gray-300 dark:bg-gray-600 hover:bg-blue-500 transition-colors z-10"
+                        style={{
+                            ...splitterStyle,
+                            width: splitterOrientation === 'vertical' ? '8px' : '100%', // 8px wide for vertical splitter
+                            height: splitterOrientation === 'vertical' ? '100%' : '8px', // 8px high for horizontal splitter
+                            transform: splitterOrientation === 'vertical' ? 'translateX(-4px)' : 'translateY(-4px)', // Center the 8px splitter
+                        }}
+                        onMouseDown={handleMouseDown} // Crucial: Attaches the drag start handler
+                    />
+                )}
+
+                {/* Right Panel: The Table */}
+                <div style={tablePanelStyle} className={`h-full ${disabledPointerEventsClass}`}>
+                    <Table 
+                        table={table} 
+                        highlightedIndex={highlightedIndex}
+                        onRowHover={setHighlightedIndex}
+                        onRowLeave={() => setHighlightedIndex(null)}
+                        selectedIndices={Array.from(selectedIndices)}
+                        onRowSelect={handleRowSelect}
+                        onSort={refreshChart} // Pass the refreshChart function to refresh when sorting changes
+                        showPagination={props.showPagination} // Pass the showPagination prop to Table
+                    />
+                </div>
             </div>
-          )}
         </div>
-      </div>
-    )
-  }
-  
+    );
+}
 
 
 // ===== C:\Users\mhali\OneDrive\Documents\NewDashboard\my-dashboard\src\components\Layout.jsx =====
@@ -383,7 +280,8 @@ export default function Layout() {
         <h1 className="text-2xl font-bold">{title}</h1>
         <nav className="space-x-4">
           <NavLink to="/" end className={({isActive}) => isActive ? 'font-semibold' : '' }>Home</NavLink>
-          <NavLink to="/uniquepermits" title="Unique Permits Analysis" className={({isActive}) => isActive ? 'font-semibold' : '' }>Permits</NavLink>
+          <NavLink to="/uniquepermits" title="Unique Permits Analysis" className={({isActive}) => isActive ? 'font-semibold' : '' }>Permits Analysis</NavLink>
+          <NavLink to="/deptactivity" title="Department Activity Analysis" className={({isActive}) => isActive ? 'font-semibold' : '' }>Dept Activity</NavLink>
         </nav>
       </header>
       <main className="p-4">
@@ -396,28 +294,130 @@ export default function Layout() {
 
 
 // ===== C:\Users\mhali\OneDrive\Documents\NewDashboard\my-dashboard\src\components\ChartTableComponent\Chart.jsx =====
+// ===== C:\Users\mhali\OneDrive\Documents\NewDashboard\my-dashboard\src\components\ChartTableComponent\Chart.jsx =====
 // src/components/ChartTableComponent/Chart.jsx
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo, useCallback } from 'react';
 import Plotly from 'plotly.js-dist-min';
 
-export default function Chart({ chartRef, traces, layout, barMode, chartTitle }) {
+export default function Chart({ 
+    chartRef, 
+    traces, 
+    layout: chartLayout = {}, 
+    onHover, 
+    onLeave, 
+    onSelect, 
+    highlightedIndex, 
+    highlightedCurve, 
+    selectedIndices = [], 
+    splitPos, 
+    xAxisTickAngle,
+    chartTitle
+}) {
+    // Memoize layout and config to prevent unnecessary chart re-renders
+    const layout = useMemo(() => ({
+        hovermode: 'closest',
+        barmode: 'group',
+        ...chartLayout,
+        // Add chart title if provided
+        title: chartTitle ? {
+            text: chartTitle,
+            font: {
+                size: 16,
+                color: document.body.classList.contains('dark') ? '#FFF' : '#333',
+                family: 'Arial, sans-serif'
+            },
+            xref: 'paper',
+            x: 0.5, // Center the title
+            xanchor: 'center',
+            y: 1,
+            yanchor: 'top',
+            pad: { t: 10 }
+        } : undefined,
+        xaxis: { automargin: true, type: 'category', ...chartLayout.xaxis, tickangle: xAxisTickAngle },
+        yaxis: { automargin: true, fixedrange: true, rangemode: 'tozero', ...(chartLayout.yaxis?.range ? { autorange: false } : { autorange: true }), ...chartLayout.yaxis },
+        margin: { t: chartTitle ? 70 : 50, r: 20, b: 80, l: 60, ...chartLayout.margin }, // Increase top margin if title exists
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+        font: { color: document.body.classList.contains('dark') ? '#FFF' : '#000' },
+        legend: { itemclick: 'toggle', itemdoubleclick: false, ...chartLayout.legend },
+        autosize: true,
+    }), [chartLayout, xAxisTickAngle, chartTitle]);
+
+    const config = useMemo(() => ({ responsive: true, displayModeBar: false }), []);
+
+    // Main effect to update the chart when data or interactions change
     useEffect(() => {
         if (chartRef.current && traces) {
-            Plotly.react(chartRef.current, traces, {
-                title: chartTitle,
-                barmode: barMode,
-                paper_bgcolor: 'rgba(0,0,0,0)',
-                plot_bgcolor: 'rgba(0,0,0,0)',
-                font: {
-                    color: document.body.classList.contains('dark') ? '#FFF' : '#000'
-                },
-                ...layout
-            }, { responsive: true });
-        }
-    }, [chartRef, traces, layout, barMode, chartTitle]);
+            // Create a new array of traces with updated colors
+            const updatedTraces = traces.map((trace, traceIndex) => {
+                const newTrace = { ...trace, marker: { ...trace.marker } };
 
-    return <div ref={chartRef} className="w-full h-[450px]"></div>;
+                // Ensure there is data to process
+                if (!Array.isArray(newTrace.y)) return newTrace;
+
+                // This logic now correctly determines the color for each bar on every render
+                newTrace.marker.color = newTrace.y.map((_, i) => {
+                    const originalColor = Array.isArray(trace.marker?.color)
+                        ? trace.marker.color[i]
+                        : trace.marker?.color || '#3498db';
+
+                    // Priority 1: Selected
+                    if (selectedIndices.includes(i)) {
+                        return '#e60000'; // Bright Red for selected
+                    }
+                    
+                    // Priority 2: Highlighted
+                    if (highlightedIndex === i && highlightedCurve === traceIndex) {
+                        return '#ff9933'; // Bright Orange for highlight
+                    }
+                    
+                    // Default color
+                    return originalColor;
+                });
+                return newTrace;
+            });
+
+            Plotly.react(chartRef.current, updatedTraces, layout, config);
+        }
+    }, [traces, layout, config, highlightedIndex, highlightedCurve, selectedIndices]);
+
+    // Effect to set up event listeners. Wrapped in useCallback in parent, so this runs once.
+    useEffect(() => {
+        const plot = chartRef.current;
+        if (plot) {
+            const handleHover = (eventData) => {
+                if (onHover && eventData.points.length > 0) {
+                    const point = eventData.points[0];
+                    onHover(point.pointIndex, point.curveNumber);
+                }
+            };
+            const handleClick = (e) => {
+                if (onSelect && e.points.length > 0) {
+                    onSelect(e.points[0].pointIndex);
+                }
+            }
+
+            plot.on('plotly_hover', handleHover);
+            plot.on('plotly_unhover', onLeave);
+            plot.on('plotly_click', handleClick);
+            
+            return () => {
+                if (plot.removeAllListeners) {
+                    plot.removeAllListeners();
+                }
+            };
+        }
+    }, [chartRef, onHover, onLeave, onSelect]);
+
+    // Effect to resize chart when splitter moves
+    useEffect(() => {
+        if (chartRef.current) {
+            Plotly.Plots.resize(chartRef.current);
+        }
+    }, [splitPos]);
+
+    return <div ref={chartRef} className="w-full h-full"></div>;
 }
 
 
@@ -426,37 +426,129 @@ export default function Chart({ chartRef, traces, layout, barMode, chartTitle })
 
 import React from 'react';
 import { flexRender } from '@tanstack/react-table';
+import TablePagination from './TablePagination';
 
-export default function Table({ table }) {
+export default function Table({ 
+    table, 
+    highlightedIndex, 
+    onRowHover, 
+    onRowLeave,
+    selectedIndices = [],
+    onRowSelect,
+    onSort, // New prop for handling sort events
+    showPagination = false // New prop to control pagination visibility
+}) {
+    console.log('Table component - table:', table);
+    console.log('Table component - rows:', table?.getRowModel()?.rows);
+    console.log('Table component - headers:', table?.getHeaderGroups());
     return (
-        <div className="overflow-auto h-[450px]">
-            <table className="min-w-full text-sm text-left text-gray-700 dark:text-gray-300">
-                <thead className="bg-gray-100 dark:bg-gray-700 sticky top-0">
-                    {table.getHeaderGroups().map(headerGroup => (
-                        <tr key={headerGroup.id}>
-                            {headerGroup.headers.map(header => (
-                                <th key={header.id} scope="col" className="p-3">
-                                    <div onClick={header.column.getToggleSortingHandler()} className="cursor-pointer select-none">
-                                        {flexRender(header.column.columnDef.header, header.getContext())}
-                                        {{ asc: ' ▲', desc: ' ▼' }[header.column.getIsSorted()] ?? null}
-                                    </div>
-                                </th>
-                            ))}
-                        </tr>
-                    ))}
-                </thead>
-                <tbody>
-                    {table.getRowModel().rows.map(row => (
-                        <tr key={row.id} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600/50">
-                            {row.getVisibleCells().map(cell => (
-                                <td key={cell.id} className={`p-3 ${cell.column.columnDef.meta?.className}`}>
-                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                </td>
-                            ))}
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
+        <div className="flex flex-col h-full">
+            <div className="overflow-auto h-[450px]">
+                <table className="min-w-full text-sm text-left text-gray-700 dark:text-gray-300">
+                    <thead className="bg-gray-100 dark:bg-gray-700 sticky top-0">
+                        {table.getHeaderGroups().map(headerGroup => (
+                            <tr key={headerGroup.id}>
+                                {headerGroup.headers.map(header => (
+                                    <th key={header.id} scope="col" className="p-3">
+                                        <div 
+                                            onClick={(e) => {
+                                                // Get the original handler
+                                                const originalHandler = header.column.getToggleSortingHandler();
+                                                // Call it to toggle sorting with the event
+                                                if (originalHandler) {
+                                                    originalHandler(e);
+                                                }
+                                                // Then call our custom onSort handler if provided
+                                                if (onSort) {
+                                                    onSort();
+                                                }
+                                            }} 
+                                            className="cursor-pointer select-none"
+                                        >
+                                            {flexRender(header.column.columnDef.header, header.getContext())}
+                                            {{ asc: ' ▲', desc: ' ▼' }[header.column.getIsSorted()] ?? null}
+                                        </div>
+                                    </th>
+                                ))}
+                            </tr>
+                        ))}
+                    </thead>
+                    <tbody>
+                        {table.getRowModel().rows.map((row, index) => (
+                            <tr 
+                                key={row.id} 
+                                className={`border-b dark:border-gray-700 hover:bg-emerald-100 dark:hover:bg-emerald-800/50 transition-colors duration-200 cursor-pointer
+                                    ${highlightedIndex === index ? '!bg-emerald-200 dark:!bg-emerald-700/70 font-medium' : ''}
+                                    ${Array.isArray(selectedIndices) && selectedIndices.includes(index) ? '!bg-emerald-300 dark:!bg-emerald-600/60' : ''}
+                                `}
+                                onMouseEnter={() => onRowHover && onRowHover(index)}
+                                onMouseLeave={() => onRowLeave && onRowLeave()}
+                                onClick={() => onRowSelect && onRowSelect(index, false)}
+                                onDoubleClick={() => onRowSelect && onRowSelect(index, true)}
+                            >
+                                {row.getVisibleCells().map(cell => (
+                                    <td key={cell.id} className={`p-3 ${cell.column.columnDef.meta?.className}`}>
+                                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                    </td>
+                                ))}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+            {showPagination && <TablePagination table={table} />}
+        </div>
+    );
+}
+
+
+// ===== C:\Users\mhali\OneDrive\Documents\NewDashboard\my-dashboard\src\components\ChartTableComponent\TablePagination.jsx =====
+// src/components/ChartTableComponent/TablePagination.jsx
+
+import React from 'react';
+
+export default function TablePagination({ table }) {
+    return (
+        <div className="flex items-center justify-between px-4 py-2 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex items-center text-sm text-gray-700 dark:text-gray-300">
+                <span>
+                    Page{' '}
+                    <strong>
+                        {table.getState().pagination.pageIndex + 1} of{' '}
+                        {table.getPageCount()}
+                    </strong>
+                </span>
+            </div>
+            <div className="flex items-center space-x-2">
+                <button
+                    className="px-2 py-1 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
+                    onClick={() => table.setPageIndex(0)}
+                    disabled={!table.getCanPreviousPage()}
+                >
+                    {'<<'}
+                </button>
+                <button
+                    className="px-2 py-1 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
+                    onClick={() => table.previousPage()}
+                    disabled={!table.getCanPreviousPage()}
+                >
+                    {'<'}
+                </button>
+                <button
+                    className="px-2 py-1 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
+                    onClick={() => table.nextPage()}
+                    disabled={!table.getCanNextPage()}
+                >
+                    {'>'}
+                </button>
+                <button
+                    className="px-2 py-1 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
+                    onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+                    disabled={!table.getCanNextPage()}
+                >
+                    {'>>'}
+                </button>
+            </div>
         </div>
     );
 }
@@ -466,45 +558,50 @@ export default function Table({ table }) {
 // src/components/ChartTableComponent/Toolbar.jsx
 
 import React from 'react';
-import { VscGraph, VscTable, VscGraphLine } from 'react-icons/vsc';
+import { VscGraphLine } from 'react-icons/vsc';
 import { FaChartBar } from 'react-icons/fa';
-import { PiMicrosoftExcelLogoDuotone, PiFilePngDuotone } from 'react-icons/pi';
+import { PiMicrosoftExcelLogoDuotone } from 'react-icons/pi';
+import { LuImageDown } from "react-icons/lu";
 
-export default function Toolbar({ view, setView, chartType, setChartType, onExportCsv, onExportPng }) {
+export default function Toolbar({ chartType, setChartType, onExportCsv, onExportPng, showChartTypeSwitcher = true }) {
     return (
         <div className="flex items-center justify-between mb-4">
-            {/* View Switcher: Chart or Table */}
-            <div className="p-1 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center">
-                <button onClick={() => setView('chart')} className={`px-3 py-1 text-sm rounded-md flex items-center gap-2 ${view === 'chart' ? 'bg-white dark:bg-gray-900 shadow' : ''}`}>
-                    <VscGraph /> Chart
-                </button>
-                <button onClick={() => setView('table')} className={`px-3 py-1 text-sm rounded-md flex items-center gap-2 ${view === 'table' ? 'bg-white dark:bg-gray-900 shadow' : ''}`}>
-                    <VscTable /> Table
-                </button>
-            </div>
+            {/* Chart Type Switcher - only shown if showChartTypeSwitcher is true */}
+            {showChartTypeSwitcher ? (
+                <div className="p-1 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center">
+                    <button 
+                        onClick={() => setChartType('bar')} 
+                        title="Bar Chart" 
+                        className={`px-3 py-1 text-sm rounded-md flex items-center gap-2 ${chartType === 'bar' ? 'bg-white dark:bg-gray-900 shadow' : ''}`}
+                    >
+                        <FaChartBar /> Bar
+                    </button>
+                    <button id='btnLineChart'
+                        onClick={() => setChartType('line')} 
+                        title="Line Chart" 
+                        className={`px-3 py-1 text-sm rounded-md flex items-center gap-2 ${chartType === 'line' ? 'bg-white dark:bg-gray-900 shadow' : ''}`}
+                    >
+                        <VscGraphLine /> Line
+                    </button>
+                </div>
+            ) : (
+                <div></div> /* Empty div to maintain layout when chart type switcher is hidden */
+            )}
 
+            {/* Export Buttons */}
             <div className="flex items-center gap-2">
-                {/* Chart Type Switcher (only shown in chart view) */}
-                {view === 'chart' && (
-                     <div className="p-1 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center">
-                        <button onClick={() => setChartType('bar')} title="Bar Chart" className={`px-2 py-1 text-lg rounded-md ${chartType === 'bar' ? 'bg-white dark:bg-gray-900 shadow' : ''}`}>
-                            <FaChartBar />
-                        </button>
-                        <button onClick={() => setChartType('line')} title="Line Chart" className={`px-2 py-1 text-lg rounded-md ${chartType === 'line' ? 'bg-white dark:bg-gray-900 shadow' : ''}`}>
-                            <VscGraphLine />
-                        </button>
-                    </div>
-                )}
-
-                {/* Export Buttons */}
-                <button onClick={onExportCsv} className="px-3 py-1 text-sm rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 flex items-center gap-2">
+                <button 
+                    onClick={onExportCsv} 
+                    className="px-3 py-1 text-sm rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 flex items-center gap-2"
+                >
                     <PiMicrosoftExcelLogoDuotone /> Export XLSX
                 </button>
-                 {view === 'chart' && (
-                    <button onClick={onExportPng} className="px-3 py-1 text-sm rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 flex items-center gap-2">
-                        <PiFilePngDuotone /> Export PNG
-                    </button>
-                )}
+                <button 
+                    onClick={onExportPng} 
+                    className="px-3 py-1 text-sm rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 flex items-center gap-2"
+                >
+                    <LuImageDown /> Export PNG
+                </button>
             </div>
         </div>
     );
@@ -512,131 +609,111 @@ export default function Toolbar({ view, setView, chartType, setChartType, onExpo
 
 
 // ===== C:\Users\mhali\OneDrive\Documents\NewDashboard\my-dashboard\src\components\ChartTableComponent\useChartTableLogic.jsx =====
-// src/components/ChartTableComponent.jsx
+// src/hooks/useChartTableLogic.jsx
 
-import React from 'react';
-import { useChartTableLogic } from '../../hooks/useChartTableLogic';
-import Toolbar from './Toolbar';
-import Chart from './Chart';
-import Table from './Table';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useDraggableSplitter } from './useDraggableSplitter.js';
+import Plotly from 'plotly.js-dist-min';
+import {
+    useReactTable,
+    getCoreRowModel,
+    getSortedRowModel,
+    getPaginationRowModel,
+} from '@tanstack/react-table';
+import * as XLSX from 'xlsx';
 
-// This is now the main component that orchestrates everything.
-export default function ChartTableComponent(props) {
-    const {
-        data,
-        columns,
-        chartTitle,
-        xAxisTitle,
-        yAxisTitle,
-        xAccessor,
-        yAccessor,
-        splitterOrientation = 'vertical',
-        initialSplitPos = 70,
-        baseBarColor,
-        highlightBarColor,
-        traces,
-        barMode,
-        // MODIFIED: Destructure xAxisType from props to be used below
-        xAxisType = 'category',
-    } = props;
+export function useChartTableLogic({
+    data,
+    columns,
+    initialTraces,
+    xAccessor,
+    yAccessor,
+    splitterOrientation,
+    initialSplitPos,
+    chartType: propChartType,
+    chartTitle,
+    yAxisTitle,
+    baseBarColor,
+}) {
+    const [chartType, setChartType] = useState(propChartType || 'bar');
+    const [sorting, setSorting] = useState([]);
+    const chartRef = useRef(null);
+    const containerRef = useRef(null);
 
-    const {
-        view,
-        setView,
-        chartType,
-        setChartType,
-        table,
-        chartTraces,
-        chartRef,
-        handleExportCsv,
-        handleExportPng,
-        // Get splitter logic from the hook
+    const { splitPos, isDragging, handleMouseDown } = useDraggableSplitter(
         containerRef,
-        splitPos,
-        isDragging,
-    } = useChartTableLogic({
-        data,
-        columns,
-        initialTraces: traces,
-        xAccessor,
-        yAccessor,
-        yAxisTitle,
-        baseBarColor,
-        highlightBarColor,
+        initialSplitPos,
         splitterOrientation,
-        initialSplitPos
+    );
+
+    const table = useReactTable({
+        data: data || [],
+        columns: columns || [],
+        state: { sorting },
+        onSortingChange: setSorting,
+        getCoreRowModel: getCoreRowModel(),
+        getSortedRowModel: getSortedRowModel(),
+        getPaginationRowModel: getPaginationRowModel(),
     });
 
+    const chartTraces = useMemo(() => {
+        // If pre-configured traces are provided (like for grouped charts), use them.
+        if (initialTraces) {
+            // ONLY transform them if the chart type is switched to 'line'.
+            if (chartType === 'line') {
+                return initialTraces.map(trace => ({
+                    ...trace,
+                    type: 'scatter', // In Plotly, 'line' is a mode of 'scatter'
+                    mode: 'lines+markers',
+                }));
+            }
+            // IMPORTANT: If the chart type is 'bar', return the traces exactly as they were provided.
+            return initialTraces;
+        }
 
-    // Logic to calculate panel styles based on splitter position
-    const chartPanelStyle = {};
-    const tablePanelStyle = {};
-    const splitterStyle = {};
+        // Fallback for simple charts without pre-configured traces.
+        if (!data || !xAccessor || !yAccessor) return [];
 
-    if (splitterOrientation === 'vertical') {
-        chartPanelStyle.width = `${splitPos}%`;
-        tablePanelStyle.width = `${100 - splitPos}%`;
-        splitterStyle.left = `${splitPos}%`;
-        splitterStyle.cursor = 'col-resize';
-    } else {
-        chartPanelStyle.height = `${splitPos}%`;
-        tablePanelStyle.height = `${100 - splitPos}%`;
-        splitterStyle.top = `${splitPos}%`;
-        splitterStyle.cursor = 'row-resize';
-    }
+        const sortedData = table.getRowModel().rows.map(row => row.original);
+        return [{
+            x: sortedData.map(d => d[xAccessor]),
+            y: sortedData.map(d => d[yAccessor]),
+            type: chartType,
+            mode: chartType === 'line' ? 'lines+markers' : undefined,
+            name: yAxisTitle || 'Data',
+            marker: { color: baseBarColor || '#3498db' },
+        }];
+    }, [initialTraces, chartType, data, xAccessor, yAccessor, table, sorting, yAxisTitle, baseBarColor]);
+
+    const handleExportCsv = useCallback(() => {
+        const rows = table.getCoreRowModel().rows.map(row => row.original);
+        if (rows.length > 0) {
+            const worksheet = XLSX.utils.json_to_sheet(rows);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Data');
+            XLSX.writeFile(workbook, `${chartTitle || 'data'}.xlsx`);
+        }
+    }, [table, chartTitle]);
+
+    const handleExportPng = useCallback(() => {
+        if (chartRef.current) {
+            Plotly.toImage(chartRef.current, { format: 'png', height: 600, width: 900 })
+                .then(url => {
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${chartTitle || 'chart'}.png`;
+                    a.click();
+                });
+        }
+    }, [chartRef, chartTitle]);
     
-    const disabledPointerEventsClass = isDragging ? 'pointer-events-none' : '';
+    const refreshChart = useCallback(() => {}, []);
 
-    return (
-        <div className="w-full h-full flex flex-col bg-white dark:bg-gray-800/50 p-4 rounded-lg shadow">
-            <Toolbar
-                view={view}
-                setView={setView}
-                chartType={chartType}
-                setChartType={setChartType}
-                onExportCsv={handleExportCsv}
-                onExportPng={handleExportPng}
-            />
-
-            {/* MODIFIED: This JSX is now restructured to correctly handle view switching and splitter layout */}
-            <div ref={containerRef} className={`relative flex flex-grow overflow-hidden ${splitterOrientation === 'vertical' ? 'flex-row' : 'flex-col'}`}>
-                {view === 'chart' ? (
-                    <>
-                        <div style={chartPanelStyle} className={`pb-2 ${splitterOrientation === 'vertical' ? 'pr-2' : ''} ${disabledPointerEventsClass}`}>
-                            <Chart
-                                chartRef={chartRef}
-                                traces={chartTraces}
-                                layout={{ 
-                                    xaxis: { title: xAxisTitle, type: xAxisType }, // <-- FIX: Pass xAxisType to chart
-                                    yaxis: { title: yAxisTitle, tickformat: ',d' }
-                                }}
-                                barMode={barMode}
-                                chartTitle={chartTitle}
-                            />
-                        </div>
-                        <div 
-                            id="splitter" 
-                            className="absolute bg-gray-300 dark:bg-gray-600 hover:bg-blue-500 transition-colors z-10" 
-                            style={{
-                                ...splitterStyle,
-                                width: splitterOrientation === 'vertical' ? '8px' : '100%',
-                                height: splitterOrientation === 'vertical' ? '100%' : '8px',
-                                transform: splitterOrientation === 'vertical' ? 'translateX(-4px)' : 'translateY(-4px)',
-                            }}
-                        />
-                        <div style={tablePanelStyle} className={`pt-2 ${splitterOrientation === 'vertical' ? 'pl-2' : ''} ${disabledPointerEventsClass}`}>
-                             <Table table={table} />
-                        </div>
-                    </>
-                ) : (
-                    // When view is 'table', just show the full-width table
-                    <div className="w-full h-full">
-                        <Table table={table} />
-                    </div>
-                )}
-            </div>
-        </div>
-    );
+    return {
+        chartType, setChartType, table, chartTraces, chartRef,
+        handleExportCsv, handleExportPng, refreshChart,
+        containerRef, splitPos, isDragging, handleMouseDown,
+    };
 }
 
 
@@ -767,8 +844,273 @@ export default function MultiSelectDropdown({
 }
 
 
-// ===== C:\Users\mhali\OneDrive\Documents\NewDashboard\my-dashboard\src\components\UniquePermitAnalysis\AnnualUniquePermitsReport.jsx =====
+// ===== C:\Users\mhali\OneDrive\Documents\NewDashboard\my-dashboard\src\components\DeptActivity\LUActivityReport.jsx =====
 import React, { useMemo } from 'react';
+import ChartTableComponent from '../../components/ChartTableComponent';
+// Add debug logging to help diagnose the issue
+
+export default function LUActivityReport({ data, isLoading }) {
+    console.log('LUActivityReport - data:', data);
+    console.log('LUActivityReport - isLoading:', isLoading);
+    // Define columns for the table using modern @tanstack/react-table v8 syntax
+    const columns = useMemo(() => [
+        {
+            header: 'Year',
+            accessorKey: 'year',
+            id: 'year',
+            sortingFn: 'basic',
+            cell: info => info.getValue()
+        },
+        {
+            header: 'Activity Count',
+            accessorKey: 'activity_count',
+            id: 'activity_count',
+            sortingFn: 'basic',
+            cell: info => info.getValue().toLocaleString()
+        }
+    ], []);
+
+    // Create traces for the chart
+    const traces = useMemo(() => {
+        if (!data || !Array.isArray(data) || data.length === 0) {
+            console.log('LUActivityReport - No data available for traces');
+            return [];
+        }
+
+        // Sort data by year
+        const sortedData = [...data].sort((a, b) => a.year - b.year);
+        console.log('LUActivityReport - Sorted data for traces:', sortedData);
+        
+        return [{
+            x: sortedData.map(item => item.year),
+            y: sortedData.map(item => item.activity_count),
+            type: 'bar',
+            name: 'LU Activity',
+            marker: { color: '#16a34a' }, // Green color for LU
+            text: sortedData.map(item => item.activity_count.toLocaleString()),
+            textposition: 'inside',
+            insidetextanchor: 'middle',
+            textfont: {
+                color: 'white',
+                size: 12
+            },
+            hovertemplate: '<b>Year: %{x}</b><br>Activity Count: %{y:,}<extra></extra>'
+        }];
+    }, [data]);
+
+    return (
+        <div className="lu-activity-report">
+            <h2 className="text-2xl font-bold mb-4">LU Department Activity</h2>
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                <ChartTableComponent 
+                    id='chartLUActivity'
+                    data={Array.isArray(data) ? data : []}
+                    columns={columns}
+                    isLoading={isLoading}
+                    chartTitle="LU Department Activity by Year"
+                    xAxisTitle="Year"
+                    yAxisTitle="Activity Count"
+                    traces={traces}
+                    showTrendLine={true}
+                    showAverageLine={true}
+                    showBarLabels={true}
+                    barLabelPosition="inside"
+                    barLabelInsideAnchor="middle"
+                    barLabelFontColor="white"
+                    excelFileName="LUActivityReport.xlsx"
+                    chartFileName="LUActivityReport.png"
+                    excelSheetName="LU Activity"
+                    showTablePanel={true}
+                    initialSplitPos={70}
+                    showPagination={false}
+                    showChartTypeSwitcher={true}
+                    chartType="bar"
+                />
+            </div>
+        </div>
+    );
+}
+
+
+
+// ===== C:\Users\mhali\OneDrive\Documents\NewDashboard\my-dashboard\src\components\DeptActivity\PLNCheckActivityReport.jsx =====
+import React, { useMemo } from 'react';
+import ChartTableComponent from '../../components/ChartTableComponent';
+
+export default function PLNCheckActivityReport({ data, isLoading }) {
+    console.log('PLNCheckActivityReport - data:', data);
+    console.log('PLNCheckActivityReport - isLoading:', isLoading);
+    // Define columns for the table using modern @tanstack/react-table v8 syntax
+    const columns = useMemo(() => [
+        {
+            header: 'Year',
+            accessorKey: 'year',
+            id: 'year',
+            sortingFn: 'basic',
+            cell: info => info.getValue()
+        },
+        {
+            header: 'Activity Count',
+            accessorKey: 'activity_count',
+            id: 'activity_count',
+            sortingFn: 'basic',
+            cell: info => info.getValue().toLocaleString()
+        }
+    ], []);
+
+    // Create traces for the chart
+    const traces = useMemo(() => {
+        if (!data || !Array.isArray(data) || data.length === 0) {
+            console.log('PLNCheckActivityReport - No data available for traces');
+            return [];
+        }
+
+        // Sort data by year
+        const sortedData = [...data].sort((a, b) => a.year - b.year);
+        
+        return [{
+            x: sortedData.map(item => item.year),
+            y: sortedData.map(item => item.activity_count),
+            type: 'bar',
+            name: 'PLN Check Activity',
+            marker: { color: '#9d174d' }, // Pink color for PLN Check
+            text: sortedData.map(item => item.activity_count.toLocaleString()),
+            textposition: 'inside',
+            insidetextanchor: 'middle',
+            textfont: {
+                color: 'white',
+                size: 12
+            },
+            hovertemplate: '<b>Year: %{x}</b><br>Activity Count: %{y:,}<extra></extra>'
+        }];
+    }, [data]);
+
+    return (
+        <div className="pln-check-activity-report">
+            <h2 className="text-2xl font-bold mb-4">PLN Check Department Activity</h2>
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                <ChartTableComponent 
+                    id='chartPLNCheckActivity'
+                    data={Array.isArray(data) ? data : []}
+                    columns={columns}
+                    isLoading={isLoading}
+                    chartTitle="PLN Check Department Activity by Year"
+                    xAxisTitle="Year"
+                    yAxisTitle="Activity Count"
+                    traces={traces}
+                    showTrendLine={true}
+                    showAverageLine={true}
+                    showBarLabels={true}
+                    barLabelPosition="inside"
+                    barLabelInsideAnchor="middle"
+                    barLabelFontColor="white"
+                    excelFileName="PLNCheckActivityReport.xlsx"
+                    chartFileName="PLNCheckActivityReport.png"
+                    excelSheetName="PLN Check Activity"
+                    showTablePanel={true}
+                    initialSplitPos={70}
+                    showPagination={false}
+                    showChartTypeSwitcher={true}
+                    chartType="bar"
+                />
+            </div>
+        </div>
+    );
+}
+
+
+
+// ===== C:\Users\mhali\OneDrive\Documents\NewDashboard\my-dashboard\src\components\DeptActivity\PSCActivityReport.jsx =====
+import React, { useMemo } from 'react';
+import ChartTableComponent from '../../components/ChartTableComponent';
+
+export default function PSCActivityReport({ data, isLoading }) {
+    console.log('PSCActivityReport - data:', data);
+    console.log('PSCActivityReport - isLoading:', isLoading);
+    console.log('PSC Activity Report - Data:', data);
+    console.log('PSC Activity Report - isLoading:', isLoading);
+    // Define columns for the table using modern @tanstack/react-table v8 syntax
+    const columns = useMemo(() => [
+        {
+            header: 'Year',
+            accessorKey: 'year',
+            id: 'year',
+            sortingFn: 'basic',
+            cell: info => info.getValue()
+        },
+        {
+            header: 'Activity Count',
+            accessorKey: 'activity_count',
+            id: 'activity_count',
+            sortingFn: 'basic',
+            cell: info => info.getValue().toLocaleString()
+        }
+    ], []);
+
+    // Create traces for the chart
+    const traces = useMemo(() => {
+        if (!data || !Array.isArray(data) || data.length === 0) {
+            console.log('PSCActivityReport - No data available for traces');
+            return [];
+        }
+
+        // Sort data by year
+        const sortedData = [...data].sort((a, b) => a.year - b.year);
+        
+        return [{
+            x: sortedData.map(item => item.year),
+            y: sortedData.map(item => item.activity_count),
+            type: 'bar',
+            name: 'PSC Activity',
+            marker: { color: '#2563eb' },
+            text: sortedData.map(item => item.activity_count.toLocaleString()),
+            textposition: 'inside',
+            insidetextanchor: 'middle',
+            textfont: {
+                color: 'white',
+                size: 12
+            },
+            hovertemplate: '<b>Year: %{x}</b><br>Activity Count: %{y:,}<extra></extra>'
+        }];
+    }, [data]);
+
+    return (
+        <div className="psc-activity-report">
+            <h2 className="text-2xl font-bold mb-4">PSC Department Activity</h2>
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                <ChartTableComponent 
+                    id='chartPSCActivity'
+                    data={Array.isArray(data) ? data : []}
+                    columns={columns}
+                    isLoading={isLoading}
+                    chartTitle="PSC Department Activity by Year"
+                    xAxisTitle="Year"
+                    yAxisTitle="Activity Count"
+                    traces={traces}
+                    showTrendLine={true}
+                    showAverageLine={true}
+                    showBarLabels={true}
+                    barLabelPosition="inside"
+                    barLabelInsideAnchor="middle"
+                    barLabelFontColor="white"
+                    excelFileName="PSCActivityReport.xlsx"
+                    chartFileName="PSCActivityReport.png"
+                    excelSheetName="PSC Activity"
+                    showTablePanel={true}
+                    initialSplitPos={70}
+                    showPagination={false}
+                    showChartTypeSwitcher={true}
+                    chartType="bar"
+                />
+            </div>
+        </div>
+    );
+}
+
+
+
+// ===== C:\Users\mhali\OneDrive\Documents\NewDashboard\my-dashboard\src\components\UniquePermitAnalysis\AnnualUniquePermitsReport.jsx =====
+import React, { useMemo, useEffect, useState } from 'react';
 import ChartTableComponent from '../ChartTableComponent';
 import { createColumnHelper } from '@tanstack/react-table';
 
@@ -802,6 +1144,30 @@ const columns = [
 ];
 
 export default function AnnualUniquePermitsReport({ data, isLoading, selectedItemsCount }) {
+    const [valuationData, setValuationData] = useState([]);
+    const [filteredValuationData, setFilteredValuationData] = useState([]);
+    
+    // Fetch the valuation data
+    useEffect(() => {
+        fetch('/data/UniquePermitsAnalysisData/UniquePermitYearlyBinsJson.json')
+            .then(response => response.json())
+            .then(data => {
+                setValuationData(data);
+            })
+            .catch(error => console.error('Error loading valuation data:', error));
+    }, []);
+    
+    // Filter valuation data based on selected years in the main data
+    useEffect(() => {
+        if (valuationData.length === 0 || data.length === 0) return;
+        
+        // Get the years from the filtered data
+        const selectedYears = data.map(item => item.FiscalYear);
+        
+        // Filter the valuation data to only include those years
+        const filtered = valuationData.filter(item => selectedYears.includes(item.year));
+        setFilteredValuationData(filtered);
+    }, [valuationData, data]);
     const chartTitle = useMemo(() => {
         if (selectedItemsCount === 0) {
             return 'Annual Permit Volume for All Years';
@@ -819,22 +1185,144 @@ export default function AnnualUniquePermitsReport({ data, isLoading, selectedIte
         }));
     }, [data]);
 
+    // Create columns for the valuation thresholds table
+    const valuationColumns = useMemo(() => [
+        columnHelper.accessor('permit_range', {
+            header: 'Valuation Range',
+            cell: info => info.getValue(),
+            enableSorting: true
+        }),
+        ...Array.from(new Set(filteredValuationData.map(item => item.year)))
+            .sort((a, b) => a - b)
+            .map(year => columnHelper.accessor(
+                row => {
+                    const item = filteredValuationData.find(d => d.permit_range === row.permit_range && d.year === year);
+                    return item ? item.count : 0;
+                },
+                {
+                    id: `year_${year}`,
+                    header: year.toString(),
+                    cell: info => info.getValue().toLocaleString(),
+                    enableSorting: true,
+                    meta: { className: 'text-right' }
+                }
+            ))
+    ], [filteredValuationData]);
+
+    // Process the valuation data for the table
+    const valuationTableData = useMemo(() => {
+        if (filteredValuationData.length === 0) return [];
+        
+        // Get unique permit ranges
+        const permitRanges = [...new Set(filteredValuationData.map(item => item.permit_range))];
+        
+        // Create a row for each permit range
+        return permitRanges.map(range => ({
+            permit_range: range
+        }));
+    }, [filteredValuationData]);
+
+    // Define custom colors for each year
+    const yearColors = useMemo(() => ({
+        2016: '#2563eb', // Blue
+        2017: '#1d4ed8', // Darker Blue
+        2018: '#7e22ce', // Purple
+        2019: '#a855f7', // Lighter Purple
+        2020: '#94a3b8', // Gray
+        2021: '#0ea5e9', // Sky Blue
+        2022: '#16a34a', // Green
+        2023: '#65a30d', // Lime Green
+        2024: '#9d174d', // Pink
+        2025: '#1e40af'  // Navy Blue
+    }), []);
+
+    // Create traces for the valuation chart
+    const valuationTraces = useMemo(() => {
+        if (filteredValuationData.length === 0) return [];
+        
+        // Get unique years and permit ranges
+        const years = [...new Set(filteredValuationData.map(item => item.year))].sort((a, b) => a - b);
+        const permitRanges = [...new Set(filteredValuationData.map(item => item.permit_range))];
+        
+        // Create a trace for each year
+        return years.map(year => {
+            // Filter data for this year
+            const yearData = filteredValuationData.filter(item => item.year === year);
+            
+            // Create an array of counts for each permit range
+            const counts = permitRanges.map(range => {
+                const item = yearData.find(d => d.permit_range === range);
+                return item ? item.count : 0;
+            });
+            
+            return {
+                x: permitRanges,
+                y: counts,
+                name: year.toString(),
+                type: 'bar',
+                marker: { color: yearColors[year] || `hsl(${year * 25 % 360}, 70%, 50%)` },
+                text: counts.map(val => val > 0 ? val.toString() : ''),
+                textposition: 'inside',
+                insidetextanchor: 'middle',
+                textfont: {
+                    color: 'white',
+                    size: 12
+                },
+                hovertemplate: `<b>Year:</b> ${year}<br><b>Range:</b> %{x}<br><b>Volume:</b> %{y}<extra></extra>`
+            };
+        });
+    }, [filteredValuationData, yearColors]);
+
+    // Determine if valuation data is loading
+    const isValuationLoading = useMemo(() => {
+        return isLoading || valuationData.length === 0;
+    }, [isLoading, valuationData]);
+
     return (
-        <div className="annual-analysis-section h-full flex flex-col">
-            <ChartTableComponent
-                data={processedData}
-                columns={columns}
-                isLoading={isLoading}
-                chartTitle={chartTitle}
-                xAxisTitle="Fiscal Year"
-                yAxisTitle="Total Permits"
-                xAccessor="FiscalYear"
-                yAccessor="PermitCount"
-                chartType="bar"
-                showTrendLine={true}
-                excelFileName="AnnualPermitReport.xlsx"
-                chartFileName="AnnualPermitReport.png"
-            />
+        <div className="annual-analysis-section h-full flex flex-col space-y-8">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                <ChartTableComponent id='chartAnnualUniquePermitsReport'
+                    data={processedData}
+                    columns={columns}
+                    isLoading={isLoading}
+                    chartTitle={chartTitle}
+                    xAxisTitle="Fiscal Year"
+                    yAxisTitle="Total Permits"
+                    xAccessor="FiscalYear"
+                    yAccessor="PermitCount"
+                    chartType="bar"
+                    showTrendLine={true}
+                    excelFileName="AnnualPermitReport.xlsx"
+                    chartFileName="AnnualPermitReport.png"
+                />
+            </div>
+            
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                <ChartTableComponent id='chartValuationThresholds'
+                    data={valuationTableData}
+                    columns={valuationColumns}
+                    isLoading={isValuationLoading}
+                    chartTitle="Permit Volume by Unique Permit Numbers — Binned by Valuation Thresholds"
+                    xAxisTitle="Valuation Range"
+                    yAxisTitle="Permit Volume"
+                    traces={valuationTraces}
+                    barMode="group"
+                    showTrendLine={false}
+                    showAverageLine={false}
+                    showBarLabels={true}
+                    barLabelPosition="inside"
+                    barLabelInsideAnchor="middle"
+                    barLabelFontColor="white"
+                    excelFileName="ValuationThresholdReport.xlsx"
+                    chartFileName="ValuationThresholdReport.png"
+                    excelSheetName="Valuation Thresholds"
+                    showTablePanel={true}
+                    initialSplitPos={70}
+                    showPagination={false}
+                    showChartTypeSwitcher={false}
+                    chartType="bar"
+                />
+            </div>
         </div>
     );
 }
@@ -850,15 +1338,24 @@ import { createColumnHelper } from '@tanstack/react-table';
 
 const columnHelper = createColumnHelper();
 
+// Month names for conversion
 const monthNames = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December'
 ];
 
-export default function MonthlyUniquePermitsReport({ data, isLoading, selectedYear, selectedQuarter, selectedMonth }) {
+export default function MonthlyUniquePermitsReport({ data, isLoading }) {
+  // Using data directly from parent component (already filtered)
 
   // Define base columns for monthly data when a table is needed
   const baseMonthlyColumns = useMemo(() => [
+    columnHelper.accessor('FiscalYear', { header: 'Fiscal Year', cell: info => info.getValue(), enableSorting: true }),
+    columnHelper.accessor('FiscalMonth', { header: 'Month', cell: info => info.getValue(), enableSorting: true }),
+    columnHelper.accessor('PermitCount', { header: 'Permit Count', cell: info => info.getValue().toLocaleString(), enableSorting: true }),
+  ], []);
+  
+  // Define columns with Quarter for when it's needed
+  const baseMonthlyColumnsWithQuarter = useMemo(() => [
     columnHelper.accessor('FiscalYear', { header: 'Fiscal Year', cell: info => info.getValue(), enableSorting: true }),
     columnHelper.accessor('FiscalQuarter', { header: 'Quarter', cell: info => `Q${info.getValue()}`, enableSorting: true }),
     columnHelper.accessor('FiscalMonth', { header: 'Month', cell: info => info.getValue(), enableSorting: true }),
@@ -873,23 +1370,160 @@ export default function MonthlyUniquePermitsReport({ data, isLoading, selectedYe
 
   // Helper to construct titles based on current filters
   const getBaseTitle = useCallback((suffix = '') => {
+    // Since we're now using filtered data from parent, we use a simpler title
     let title = 'Monthly Permit Volume';
-    if (selectedYear !== 'All') {
-      title += ` for FY ${selectedYear}`;
+    
+    // Optional: Extract unique years from data to show in title
+    if (data && data.length > 0) {
+      const uniqueYears = [...new Set(data.map(d => d.FiscalYear))].sort((a, b) => a - b);
+      if (uniqueYears.length === 1) {
+        title += ` for FY ${uniqueYears[0]}`;
+      } else if (uniqueYears.length > 1 && uniqueYears.length <= 3) {
+        title += ` for FY ${uniqueYears.join(', ')}`;
+      } else if (uniqueYears.length > 3) {
+        title += ` for Selected Years`;
+      }
     }
-    if (selectedQuarter !== 'All') {
-      title += ` Q${selectedQuarter}`;
-    }
-    if (selectedMonth !== 'All') {
-      title += ` ${monthNames[parseInt(selectedMonth) - 1]}`;
+    // Check if data is filtered to a single month
+    if (data && data.length > 0) {
+      const uniqueMonths = [...new Set(data.map(d => d.FiscalMonth))];
+      if (uniqueMonths.length === 1) {
+        // Convert month abbreviation to full name
+        const monthAbbr = uniqueMonths[0];
+        const monthIndex = monthNames.findIndex(name => name.substring(0, 3) === monthAbbr);
+        if (monthIndex !== -1) {
+          title += ` ${monthNames[monthIndex]}`;
+        }
+      }
     }
     return `${title} ${suffix}`.trim();
-  }, [selectedYear, selectedQuarter, selectedMonth]);
+  }, [data]);
 
   // --- Data preparation for specific charts ---
 
-  // 1. Overall Monthly Analysis (Full Width)
-  const overallMonthlyChartData = data;
+  // 0. Monthly Analysis (Full Width) - Grouped by Year
+  // Transform data to create grouped bar chart traces for each year with monthly data
+  const groupedBarTraces = useMemo(() => {
+    if (!data || data.length === 0) return [];
+    
+    // Get unique years from the data
+    const years = [...new Set(data.map(d => d.FiscalYear))].sort((a, b) => a - b);
+    
+    // Define month order for correct x-axis sorting
+    const monthOrder = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    
+    // Generate a color for each year
+    const yearColors = {
+      2016: '#1f77b4', // Blue
+      2017: '#ff7f0e', // Orange
+      2018: '#2ca02c', // Green
+      2019: '#d62728', // Red
+      2020: '#9467bd', // Purple
+      2021: '#8c564b', // Brown
+      2022: '#e377c2', // Pink
+      2023: '#7f7f7f', // Gray
+      2024: '#bcbd22', // Olive
+      2025: '#17becf'  // Cyan
+    };
+    
+    // Create a trace for each year
+    const traces = [];
+    
+    years.forEach((year, index) => {
+      // Filter data for this year
+      const yearData = data.filter(d => d.FiscalYear === year);
+      
+      // Create an array of permit counts for each month
+      const monthlyValues = monthOrder.map(month => {
+        const monthData = yearData.find(d => d.FiscalMonth === month);
+        return monthData ? monthData.PermitCount : 0;
+      });
+      
+      // Month labels are already in the right format
+      const monthLabels = monthOrder;
+      
+      // Create the trace for this year
+      traces.push({
+        x: monthLabels,
+        y: monthlyValues,
+        name: year.toString(),
+        type: 'bar',
+        marker: { color: yearColors[year] || `hsl(${index * 60 % 360}, 70%, 50%)` },
+        text: monthlyValues.map(val => val > 0 ? val.toString() : ''),
+        textposition: 'inside',
+        insidetextanchor: 'middle',
+        textfont: {
+          size: 11,
+          color: 'white',
+          family: 'sans-serif'
+        },
+        hovertemplate: `<b>%{x} ${year}</b><br>Permits: %{y}<extra></extra>`
+      });
+    });
+    
+    return traces;
+  }, [data]);
+
+  // 1. Monthly Analysis (Full Width) - Grouped by Month
+  // Transform data to create grouped bar chart traces for each year with monthly data
+  const monthlyGroupedTraces = useMemo(() => {
+    if (!data || data.length === 0) return [];
+    
+    // Get unique years from the data
+    const years = [...new Set(data.map(d => d.FiscalYear))].sort((a, b) => a - b);
+    
+    // Define month order for correct x-axis sorting
+    const monthOrder = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    
+    // Generate a color for each year
+    const yearColors = {
+      2016: '#1f77b4', // Blue
+      2017: '#ff7f0e', // Orange
+      2018: '#2ca02c', // Green
+      2019: '#d62728', // Red
+      2020: '#9467bd', // Purple
+      2021: '#8c564b', // Brown
+      2022: '#e377c2', // Pink
+      2023: '#7f7f7f', // Gray
+      2024: '#bcbd22', // Olive
+      2025: '#17becf'  // Cyan
+    };
+    
+    // Create a trace for each year
+    const traces = [];
+    
+    years.forEach((year, index) => {
+      // Filter data for this year
+      const yearData = data.filter(d => d.FiscalYear === year);
+      
+      // Create an array of permit counts for each month
+      const monthlyValues = monthOrder.map(month => {
+        const monthData = yearData.find(d => d.FiscalMonth === month);
+        return monthData ? monthData.PermitCount : 0;
+      });
+      
+      // Month labels are already in the right format
+      const monthLabels = monthOrder;
+      
+      // Create the trace for this year
+      traces.push({
+        x: monthLabels,
+        y: monthlyValues,
+        name: year.toString(),
+        type: 'bar',
+        marker: { color: yearColors[year] || `hsl(${year * 25 % 360}, 70%, 50%)` },
+        text: monthlyValues.map(val => val > 0 ? val.toString() : ''),
+        textposition: 'outside',
+        textfont: {
+          size: 12,
+          color: 'black'
+        },
+        hovertemplate: `<b>%{x} ${year}</b><br>Permits: %{y}<extra></extra>`
+      });
+    });
+    
+    return traces;
+  }, [data]);
 
   // 2. Monthly Permit Count by Year (Full Width) - for trend across years
   // This aggregates permits by FiscalYear from the incoming data
@@ -904,7 +1538,10 @@ export default function MonthlyUniquePermitsReport({ data, isLoading, selectedYe
 
   // Data for each individual month across years (for 2x6 grid)
   const getSingleMonthData = useCallback((monthNum) => {
-    return data.filter(d => d.FiscalMonth === monthNum);
+    // Convert month number to abbreviation (Jan, Feb, etc.)
+    const monthOrder = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const monthAbbr = monthOrder[monthNum - 1];
+    return data.filter(d => d.FiscalMonth === monthAbbr);
   }, [data]);
 
   // Generate an array of data for all 12 months
@@ -915,113 +1552,98 @@ export default function MonthlyUniquePermitsReport({ data, isLoading, selectedYe
     }));
   }, [getSingleMonthData]);
 
+  // Calculate the global maximum value for the y-axis across all monthly charts
+  const globalMaxPermitCount = useMemo(() => {
+    // Flatten all monthly data and find the maximum PermitCount
+    const allMonthlyData = monthlyBreakdownChartsData.flatMap(({ data }) => data);
+    const maxValue = Math.max(...allMonthlyData.map(item => item.PermitCount), 0);
+    // Round up to the nearest 10 or 100 for a clean max value
+    return Math.ceil(maxValue / 100) * 100;
+  }, [monthlyBreakdownChartsData]);
+
 
   return (
     <div className="monthly-analysis-section space-y-8">
       {/* Full-width charts */}
       <div className="flex flex-col gap-8">
-        {/* Chart 1: Overall Monthly Trend */}
-        <ChartTableComponent
-          data={overallMonthlyChartData}
-          columns={baseMonthlyColumns}
-          isLoading={isLoading}
-          chartTitle={getBaseTitle()}
-          xAxisTitle="Fiscal Month"
-          yAxisTitle="Permit Count"
-          xAccessor="FiscalMonth"
-          yAccessor="PermitCount"
-          chartType="bar"
-          baseBarColor="#607D8B" // Blue Grey
-          highlightBarColor="#B0BEC5" // Light Blue Grey
-          excelFileName={getBaseTitle('Overall').replace(/ /g, '-') + '.xlsx'}
-          chartFileName={getBaseTitle('Overall').replace(/ /g, '-') + '-chart.png'}
-          excelSheetName="Overall Monthly"
-          showTrendLine={true}
-          trendLineColor="darkslategray"
-          showAverageLine={true}
-          averageLineColor="cadetblue"
-          showBarLabels={true}
-          barLabelPosition="inside"
-          barLabelInsideAnchor="middle"
-          barLabelRotation={0}
-          barLabelFontColor="white"
-          barLabelFontSize={10}
-          barLabelFormat={(val) => `<b>${val.toLocaleString()}</b>`}
-          hoverTemplate="<b>Month:</b> %{x}<br><b>Permits:</b> %{y:,.0f}<extra></extra>"
-          splitterOrientation="vertical"
-          initialSplitPos={60}
-          showZoomControls={false}
-          selectedRowColor="#CFD8DC" // Light Blue Grey for selection
-          hoverRowColor="#ECEFF1" // Lighter Blue Grey for hover
-          showTablePanel={true}
-        />
+        {/* Chart 0: Quarterly Grouped Bar Chart */}
+        <div className="bg-white dark:bg-gray-800/50 p-4 rounded-lg shadow mb-8" id='quarterly-grouped-report'>
+          <ChartTableComponent id='chart0_monthly_grouped'
+            data={data}
+            columns={baseMonthlyColumns}
+            isLoading={isLoading}
+            chartTitle="Permit Volume by Unique Permit Numbers — Quarterly Volumes"
+            xAxisTitle="Fiscal Quarter"
+            yAxisTitle="Permit Volume"
+            traces={groupedBarTraces}
+            barMode="group"
+            showTrendLine={false}
+            showAverageLine={false}
+            showBarLabels={false}
+            excelFileName="Quarterly-Grouped-Report.xlsx"
+            chartFileName="Quarterly-Grouped-Report.png"
+            excelSheetName="Quarterly Grouped Data"
+            showTablePanel={true}
+            initialSplitPos={80}
+            showPagination={true}
+            showChartTypeSwitcher={false}
+          />
+        </div>
 
-        {/* Chart 2: Monthly Permit Count by Year (Trend line for aggregated annual permits within monthly data) */}
-        <ChartTableComponent
-          data={monthlyByYearData}
-          columns={singleMonthTrendColumns}
-          isLoading={isLoading}
-          chartTitle={getBaseTitle('Aggregated by Year')}
-          xAxisTitle="Fiscal Year"
-          yAxisTitle="Permit Count"
-          xAccessor="FiscalYear"
-          yAccessor="PermitCount"
-          chartType="line"
-          baseBarColor="#8BC34A" // Light Green
-          highlightBarColor="#DCEDC8" // Lighter Light Green
-          excelFileName={getBaseTitle('Aggregated-Year').replace(/ /g, '-') + '.xlsx'}
-          chartFileName={getBaseTitle('Aggregated-Year').replace(/ /g, '-') + '-chart.png'}
-          excelSheetName="Monthly by Year"
-          showTrendLine={true}
-          trendLineColor="darkolivegreen"
-          showAverageLine={true}
-          averageLineColor="forestgreen"
-          showBarLabels={false}
-          hoverTemplate="<b>Year:</b> %{x}<br><b>Total Permits:</b> %{y:,.0f}<extra></extra>"
-          splitterOrientation="vertical"
-          initialSplitPos={60}
-          showZoomControls={false}
-          selectedRowColor="#E8F5E9"
-          hoverRowColor="#C8E6C9"
-          showTablePanel={true}
-        />
+        {/* Chart 1 removed as requested */}
+
+        {/* Chart 2 removed as requested */}
       </div>
 
       {/* 2x6 Grid of Monthly Charts */}
       <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4 pt-4 border-t border-gray-200 dark:border-gray-700">
         Monthly Breakdown by Specific Month
       </h3>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"> {/* Responsive grid columns */}
+      <div id='monthly-breakdown-grid' className="grid grid-cols-2 grid-rows-6 gap-4 border border-gray-200 dark:border-gray-700"> {/* Fixed 2 columns x 6 rows grid layout with outer border */}
         {monthlyBreakdownChartsData.map(({ monthNum, data: monthData }) => (
-          <ChartTableComponent
+          <div className="border border-gray-200 dark:border-gray-700 p-2">
+            <ChartTableComponent
             key={`month-chart-${monthNum}`}
             data={monthData}
             columns={singleMonthTrendColumns}
             isLoading={isLoading}
-            chartTitle={`${monthNames[monthNum - 1]} Permits ${selectedYear !== 'All' ? `for FY ${selectedYear}` : ''}`}
+            chartTitle={`${monthNames[monthNum - 1]} Permits`}
             xAxisTitle="Fiscal Year"
             yAxisTitle="Permit Count"
             xAccessor="FiscalYear"
             yAccessor="PermitCount"
-            chartType="bar"
+            chartType="line"
             baseBarColor={`hsl(${monthNum * 30}, 70%, 50%)`} // Dynamic HSL color for variety
             highlightBarColor={`hsl(${monthNum * 30}, 90%, 60%)`}
             excelFileName={`${monthNames[monthNum - 1]}-Permits.xlsx`}
             chartFileName={`${monthNames[monthNum - 1]}-permits-chart.png`}
             excelSheetName={`${monthNames[monthNum - 1]} Permits`}
-            showTrendLine={true}
-            barLabelPosition="inside"
+            showTrendLine={false}
+            showAverageLine={false}
+            barLabelPosition="top"
             barLabelInsideAnchor="middle"
-            barLabelFontColor="white"
-            barLabelFontSize={8} // Smaller font for many charts
+            barLabelFontColor="black"
+            barLabelFontSize={10} // Slightly larger font for readability
+            showBarLabels={true} // Explicitly show data labels
             showTablePanel={false} // Hide table for smaller charts
             initialSplitPos={100} // Chart only
+            showChartTypeSwitcher={true} // Enable chart type switching
+            hideSplitter={true} // Hide the draggable splitter
+            chartLayout={{
+              showlegend: false, // Hide the legend
+              yaxis: {
+                range: [0, globalMaxPermitCount], // Set consistent y-axis range
+                fixedrange: true // Prevent zooming on y-axis
+              }
+            }}
           />
+          </div>
         ))}
       </div>
     </div>
   );
 }
+
 
 
 // ===== C:\Users\mhali\OneDrive\Documents\NewDashboard\my-dashboard\src\components\UniquePermitAnalysis\QuarterlyUniquePermitsReport.jsx =====
@@ -1064,42 +1686,244 @@ export default function QuarterlyUniquePermitsReport({ data, isLoading }) {
                 const item = data.find(d => d.FiscalYear === year && d.FiscalQuarter === i);
                 return item ? item.PermitCount : null; 
             });
-            traces.push({
+            
+            // Common properties for both bar and line charts
+            const traceBase = {
                 x: years,
                 y: quarterData,
                 name: `Q${i}`,
-                type: 'bar',
+                text: quarterData.map(value => value ? `Q${i}: ${value.toLocaleString()}` : ''),
+                hoverinfo: 'y+name',
+                hovertemplate: `<b>%{x} - Q${i}</b><br>Volume: %{y:,} permits<extra></extra>`,
                 marker: { color: colors[i-1] }
+            };
+            
+            // The trace will work for both bar and line charts
+            // When in bar mode, the bar-specific properties will be used
+            // When in line mode, the line-specific properties will be used
+            traces.push({
+                ...traceBase,
+                // Bar chart specific properties
+                type: 'bar', // Default type is bar, ChartTableComponent will change this when switching to line
+                textposition: 'inside',
+                insidetextanchor: 'middle',
+                textfont: {
+                    color: 'white',
+                    size: 11,
+                    family: 'sans-serif'
+                },
+                textangle: -90,
+                
+                // Line chart specific properties (will be used when switching to line chart)
+                // These properties will be applied by the Chart component when type is changed to 'scatter'
+                line: {
+                    color: colors[i-1],
+                    width: 3
+                },
+                mode: 'lines+markers', // For line chart mode
             });
         }
         return traces;
     }, [data]);
     
-    // 2. Data for the aggregated line chart
+    // 2. Data transformation for Chart 2 (Quarterly Data by Year)
     const quarterlyByYearData = useMemo(() => {
-        const yearMap = new Map();
+        if (!data || data.length === 0) return [];
+        
+        // Group data by fiscal year and sum permit counts
+        const yearlyTotals = {};
         data.forEach(item => {
             const year = item.FiscalYear;
-            yearMap.set(year, (yearMap.get(year) || 0) + item.PermitCount);
+            if (!yearlyTotals[year]) {
+                yearlyTotals[year] = { FiscalYear: year, PermitCount: 0 };
+            }
+            yearlyTotals[year].PermitCount += item.PermitCount;
         });
-        return Array.from(yearMap).map(([FiscalYear, PermitCount]) => ({ FiscalYear, PermitCount }));
+        
+        // Convert to array and sort by year
+        return Object.values(yearlyTotals).sort((a, b) => a.FiscalYear - b.FiscalYear);
+    }, [data]);
+    
+    // 3. Generate traces for Chart 2 (Grouped by Quarter)
+    const quarterlyGroupedTraces = useMemo(() => {
+        if (!data || data.length === 0) return [];
+        
+        // Get all unique years from the data
+        const years = [...new Set(data.map(d => d.FiscalYear))].sort((a, b) => a - b);
+        
+        // Create traces for each year
+        const traces = [];
+        const quarters = [1, 2, 3, 4];
+        
+        // Generate a color for each year
+        const generateColors = (count) => {
+            const baseColors = ['#5470c6', '#91cc75', '#fac858', '#ee6666', '#73c0de', '#3ba272', '#fc8452', '#9a60b4', '#ea7ccc'];
+            return baseColors.slice(0, count);
+        };
+        
+        const colors = generateColors(years.length);
+        
+        // For each year, create a trace with data for all quarters
+        years.forEach((year, i) => {
+            // For each quarter, find the permit count for this year
+            const quarterValues = quarters.map(quarter => {
+                const item = data.find(d => d.FiscalYear === year && d.FiscalQuarter === quarter);
+                return item ? item.PermitCount : 0;
+            });
+            
+            // Create the trace for this year
+            traces.push({
+                x: quarters.map(q => `Q${q}`), // X-axis shows quarters
+                y: quarterValues,
+                name: `${year}`,
+                type: 'bar',
+                marker: { color: colors[i % colors.length] },
+                text: quarterValues.map((value, idx) => value ? `${year}: ${value.toLocaleString()}` : ''),
+                textposition: 'inside',
+                insidetextanchor: 'middle',
+                textfont: {
+                    color: 'white',
+                    size: 11,
+                    family: 'sans-serif'
+                },
+                textangle: -90,
+                hoverinfo: 'y+name',
+                hovertemplate: `<b>${year} - %{x}</b><br>Volume: %{y:,} permits<extra></extra>`
+            });
+        });
+        
+        return traces;
     }, [data]);
 
-    // 3. Data for the 2x2 grid
-    const getSingleQuarterData = useCallback((quarterNum) => {
-        return data.filter(d => d.FiscalQuarter === quarterNum);
+    // Data for individual quarter charts
+    const q1Data = useMemo(() => data.filter(item => item.FiscalQuarter === 1), [data]);
+    const q2Data = useMemo(() => data.filter(item => item.FiscalQuarter === 2), [data]);
+    const q3Data = useMemo(() => data.filter(item => item.FiscalQuarter === 3), [data]);
+    const q4Data = useMemo(() => data.filter(item => item.FiscalQuarter === 4), [data]);
+    
+    // Calculate global min and max for consistent y-axis across all quarterly charts
+    const quarterlyYAxisRange = useMemo(() => {
+        if (!data || data.length === 0) return { min: 0, max: 100 };
+        
+        // Get all permit counts from quarterly data
+        const allQuarterlyValues = [
+            ...q1Data.map(item => item.PermitCount),
+            ...q2Data.map(item => item.PermitCount),
+            ...q3Data.map(item => item.PermitCount),
+            ...q4Data.map(item => item.PermitCount)
+        ].filter(val => val !== undefined && val !== null);
+        
+        if (allQuarterlyValues.length === 0) return { min: 0, max: 100 };
+        
+        // Calculate min and max
+        const min = Math.floor(Math.min(...allQuarterlyValues) * 0.9); // Add 10% padding below
+        const max = Math.ceil(Math.max(...allQuarterlyValues) * 1.1);  // Add 10% padding above
+        
+        return { min: Math.max(0, min), max }; // Ensure min is never negative
+    }, [data, q1Data, q2Data, q3Data, q4Data]);
+    
+    // Create consistent chart layout for quarterly charts
+    const quarterlyChartLayout = useMemo(() => ({
+        yaxis: {
+            range: [quarterlyYAxisRange.min, quarterlyYAxisRange.max],
+            autorange: false
+        }
+    }), [quarterlyYAxisRange]);
+
+    // 4. Generate traces for the quarterly trend line chart
+    const quarterlyTrendTraces = useMemo(() => {
+        if (!data || data.length === 0) return [];
+        
+        // Sort data by fiscal year and quarter
+        const sortedData = [...data].sort((a, b) => {
+            if (a.FiscalYear !== b.FiscalYear) {
+                return a.FiscalYear - b.FiscalYear;
+            }
+            return a.FiscalQuarter - b.FiscalQuarter;
+        });
+        
+        // Create x-axis labels in the format YYYY-QN
+        const xLabels = sortedData.map(d => `${d.FiscalYear}-Q${d.FiscalQuarter}`);
+        const yValues = sortedData.map(d => d.PermitCount);
+        
+        // Calculate the average
+        const average = yValues.reduce((sum, val) => sum + val, 0) / yValues.length;
+        
+        // Format the average for display in the legend only
+        const formattedAverage = average.toFixed(0);
+        
+        // Create the main trend line trace
+        const trendTrace = {
+            x: xLabels,
+            y: yValues,
+            type: 'scatter',
+            mode: 'lines+markers',
+            name: 'Quarterly Trend',
+            line: {
+                color: '#1f77b4',
+                width: 3
+            },
+            marker: {
+                size: 8,
+                color: '#1f77b4'
+            },
+            // Custom hover template to show Year, Quarter, and Volume
+            hovertemplate: '<b>%{x}</b><br>Volume: %{y:,} permits<extra></extra>',
+            showlegend: false  // Hide this trace from the legend
+        };
+        
+        // Create a trace for the average line with custom settings to hide text
+        const averageTrace = {
+            x: [xLabels[0], xLabels[xLabels.length - 1]],  // Just first and last points
+            y: [average, average],
+            type: 'scatter',
+            mode: 'lines',  // MODIFIED: Ensure mode is ONLY 'lines'
+            name: `Average: ${formattedAverage}`,
+            line: {
+                color: '#ff7f0e',
+                width: 2
+            },
+            showlegend: false,  // Hide this trace from the legend
+            hoverinfo: 'name',  // MODIFIED: Only show the legend name on hover
+            // No need for other text-related properties as they're ignored with mode: 'lines'
+        };
+        
+        // No need for shapes, just use the trace
+        return [trendTrace, averageTrace];
     }, [data]);
-    const q1Data = getSingleQuarterData(1);
-    const q2Data = getSingleQuarterData(2);
-    const q3Data = getSingleQuarterData(3);
-    const q4Data = getSingleQuarterData(4);
 
     return (
-        <div className="quarterly-analysis-section space-y-8">
-            <div className="flex flex-col gap-8">
+            <>
+                {/* --- Chart 0: Quarterly Trend Line Chart --- */}
+                <div className="bg-white dark:bg-gray-800/50 p-4 rounded-lg shadow mb-8" id='quarterly-trend-report'>
+                    <ChartTableComponent id='chart0_Quarterly_Trend'
+                        data={data}
+                        columns={baseQuarterlyColumns}
+                        isLoading={isLoading}
+                        chartTitle="Permit Volume by Unique Permit Numbers — Quarterly Trend"
+                        xAxisTitle="Quarter"
+                        yAxisTitle="Permit Volume"
+                        traces={quarterlyTrendTraces}
+                        chartType="line"
+                        showTrendLine={false}
+                        showAverageLine={false}
+                        xAxisTickAngle={-45}
+                        showTablePanel={true}
+                        initialSplitPos={80}
+                        chartLayout={{
+                            showlegend: false  // Hide the legend completely
+                        }}
+                        excelFileName="Quarterly-Trend-Report.xlsx"
+                        chartFileName="Quarterly-Trend-Report.png"
+                        excelSheetName="Quarterly Trend Data"
+                        showPagination={true}
+                        showChartTypeSwitcher={false}
+                    />
+                </div>
+                
                 {/* --- Chart 1: Grouped Bar Chart --- */}
-                <div className="bg-white dark:bg-gray-800/50 p-4 rounded-lg shadow">
-                    <ChartTableComponent
+                <div className="bg-white dark:bg-gray-800/50 p-4 rounded-lg shadow mb-8" id='quarterly-grouped-report'>
+                    <ChartTableComponent id='chart1_Quarterly'
                         data={data}
                         columns={baseQuarterlyColumns}
                         isLoading={isLoading}
@@ -1115,38 +1939,43 @@ export default function QuarterlyUniquePermitsReport({ data, isLoading }) {
                         chartFileName="Quarterly-Grouped-Report.png"
                         excelSheetName="Quarterly Grouped Data"
                         showTablePanel={true}
+                        initialSplitPos={80}
+                        showPagination={true}
+                        showChartTypeSwitcher={false}
                     />
                 </div>
 
                 {/* --- Chart 2: Aggregated Line Chart --- */}
                 <div className="bg-white dark:bg-gray-800/50 p-4 rounded-lg shadow">
-                    <ChartTableComponent
-                        data={quarterlyByYearData}
-                        columns={singleYearColumns}
+                    <ChartTableComponent id='chart2_Quarterly'
+                        data={data}
+                        columns={baseQuarterlyColumns}
                         isLoading={isLoading}
-                        chartTitle="Total Quarterly Permit Volume by Year"
+                        chartTitle="Permit Volume by Unique Permit Numbers — Quarterly Volumes"
                         xAxisTitle="Fiscal Year"
-                        yAxisTitle="Total Permit Count"
-                        xAccessor="FiscalYear"
-                        yAccessor="PermitCount"
-                        chartType="line"
-                        baseBarColor="#3F51B5"
-                        showTrendLine={true}
-                        showAverageLine={true}
+                        yAxisTitle="Permit Volume"
+                        traces={quarterlyGroupedTraces}
+                        barMode="group"
+                        showTrendLine={false}
+                        showAverageLine={false}
+                        showBarLabels={false}
                         showTablePanel={true}
-                        excelFileName="Quarterly-Aggregated-Report.xlsx"
-                        chartFileName="Quarterly-Aggregated-Report.png"
+                        initialSplitPos={80}
+                        excelFileName="Quarterly-Grouped-Report-2.xlsx"
+                        chartFileName="Quarterly-Grouped-Report-2.png"
+                        excelSheetName="Quarterly Grouped Data"
+                        showPagination={true}
+                        showChartTypeSwitcher={false}
                     />
                 </div>
-            </div>
 
-            {/* --- 2x2 Grid of Charts --- */}
+                {/* --- 2x2 Grid of Charts --- */}
             <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                 Quarterly Breakdown by Specific Quarter
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-white dark:bg-gray-800/50 p-4 rounded-lg shadow">
-                    <ChartTableComponent
+                    <ChartTableComponent id='chart3_Quarterly_Q1'            
                         data={q1Data}
                         columns={singleQuarterTrendColumns}
                         isLoading={isLoading}
@@ -1155,15 +1984,19 @@ export default function QuarterlyUniquePermitsReport({ data, isLoading }) {
                         yAxisTitle="Permit Count"
                         xAccessor="FiscalYear"
                         yAccessor="PermitCount"
-                        chartType="bar"
+                        chartType="line"
                         baseBarColor="#FF5722"
                         showTablePanel={false}
                         initialSplitPos={100}
+                        hideSplitter={true}
+                        chartLayout={{...quarterlyChartLayout, showlegend: false}}
                         chartFileName="Q1-Permits-Chart.png"
+                        showTrendLine={false}
+                        showAverageLine={false}
                     />
                 </div>
                 <div className="bg-white dark:bg-gray-800/50 p-4 rounded-lg shadow">
-                    <ChartTableComponent
+                    <ChartTableComponent id='chart4_Quarterly_Q2'
                         data={q2Data}
                         columns={singleQuarterTrendColumns}
                         isLoading={isLoading}
@@ -1172,15 +2005,19 @@ export default function QuarterlyUniquePermitsReport({ data, isLoading }) {
                         yAxisTitle="Permit Count"
                         xAccessor="FiscalYear"
                         yAccessor="PermitCount"
-                        chartType="bar"
+                        chartType="line"
                         baseBarColor="#2196F3"
                         showTablePanel={false}
                         initialSplitPos={100}
+                        hideSplitter={true}
+                        chartLayout={{...quarterlyChartLayout, showlegend: false}}
                         chartFileName="Q2-Permits-Chart.png"
+                        showTrendLine={false}
+                        showAverageLine={false}
                     />
                 </div>
                 <div className="bg-white dark:bg-gray-800/50 p-4 rounded-lg shadow">
-                    <ChartTableComponent
+                    <ChartTableComponent id='chart5_Quarterly_Q3'
                         data={q3Data}
                         columns={singleQuarterTrendColumns}
                         isLoading={isLoading}
@@ -1189,15 +2026,19 @@ export default function QuarterlyUniquePermitsReport({ data, isLoading }) {
                         yAxisTitle="Permit Count"
                         xAccessor="FiscalYear"
                         yAccessor="PermitCount"
-                        chartType="bar"
+                        chartType="line"
                         baseBarColor="#9C27B0"
                         showTablePanel={false}
                         initialSplitPos={100}
+                        hideSplitter={true}
+                        chartLayout={{...quarterlyChartLayout, showlegend: false}}
                         chartFileName="Q3-Permits-Chart.png"
+                        showTrendLine={false}
+                        showAverageLine={false}
                     />
                 </div>
                 <div className="bg-white dark:bg-gray-800/50 p-4 rounded-lg shadow">
-                    <ChartTableComponent
+                    <ChartTableComponent id='chart6_Quarterly_Q4'
                         data={q4Data}
                         columns={singleQuarterTrendColumns}
                         isLoading={isLoading}
@@ -1206,18 +2047,23 @@ export default function QuarterlyUniquePermitsReport({ data, isLoading }) {
                         yAxisTitle="Permit Count"
                         xAccessor="FiscalYear"
                         yAccessor="PermitCount"
-                        chartType="bar"
+                        chartType="line"
                         baseBarColor="#FFEB3B"
                         barLabelFontColor="black"
                         showTablePanel={false}
                         initialSplitPos={100}
+                        hideSplitter={true}
+                        chartLayout={{...quarterlyChartLayout, showlegend: false}}
                         chartFileName="Q4-Permits-Chart.png"
+                        showTrendLine={false}
+                        showAverageLine={false}
                     />
                 </div>
             </div>
-        </div>
+        </>
     );
 }
+
 
 
 // ===== C:\Users\mhali\OneDrive\Documents\NewDashboard\my-dashboard\src\contexts\LayoutContext.jsx =====
@@ -1245,60 +2091,477 @@ export const useLayout = () => {
 
 
 
+// ===== C:\Users\mhali\OneDrive\Documents\NewDashboard\my-dashboard\src\hooks\useChartTableLogic.js =====
+// src/hooks/useChartTableLogic.js
+
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useDraggableSplitter } from './useDraggableSplitter'; // Import the corrected splitter hook
+// import { usePlotlyChart } from './usePlotlyChart'; // This hook is consumed by the Chart component directly, not usually here
+import Plotly from 'plotly.js-dist-min'; // Import Plotly for export functions
+import {
+    useReactTable,
+    getCoreRowModel,
+    getSortedRowModel,
+    getFilteredRowModel,
+    getPaginationRowModel,
+} from '@tanstack/react-table';
+
+export function useChartTableLogic({
+    // Props passed from ChartTableComponent that this hook needs
+    data,
+    columns,
+    initialTraces, // Renamed from 'traces' in props to avoid confusion if hook generates new traces
+    xAccessor,
+    yAccessor,
+    xAxisTitle,
+    yAxisTitle,
+    baseBarColor,
+    highlightBarColor,
+    splitterOrientation,
+    initialSplitPos,
+    chartType: propChartType, // Rename prop to avoid conflict with internal state
+    chartTitle,
+    barMode,
+    xAxisType = 'category', // Default to category for X axis
+    showTrendLine = true, // Default to showing trend line
+    showAverageLine = true // Default to showing average line
+}) {
+    // State for chart type
+    const [chartType, setChartType] = useState(propChartType || 'bar'); // Default chart type
+
+    // Refs for Plotly chart component and the main container for the splitter
+    const chartRef = useRef(null);
+    const containerRef = useRef(null); // This ref will be passed to useDraggableSplitter
+
+    // Use the draggable splitter hook to manage split position and dragging state
+    const { splitPos, isDragging, handleMouseDown } = useDraggableSplitter(
+        containerRef,
+        initialSplitPos,
+        splitterOrientation,
+        // Optional: onDrag callback for when split position changes
+        // This is important for responsive charts (like Plotly) that need to redraw
+        useCallback(() => {
+            if (chartRef.current) {
+                // Trigger Plotly to redraw itself to fit the new container size
+                // This assumes Chart component uses Plotly.js directly and resizes with its container
+                Plotly.relayout(chartRef.current, { autosize: true });
+            }
+        }, [chartRef]) // Dependency: chartRef to access the Plotly chart instance
+    );
+
+    // --- Data Processing Logic ---
+    // This section needs to transform your raw 'data' and 'columns' into
+    // the format required by your 'Table' and 'Chart' components.
+    // Replace this placeholder logic with your actual data transformation.
+
+    // Initialize the table using useReactTable
+    const table = useReactTable({
+        data: data || [],
+        columns: columns || [],
+        getCoreRowModel: getCoreRowModel(),
+        getSortedRowModel: getSortedRowModel(),
+        getFilteredRowModel: getFilteredRowModel(),
+        getPaginationRowModel: getPaginationRowModel(),
+        debugTable: true,
+    });
+
+    // Generate chart traces with data labels, average line, and trend line
+    const chartTraces = useMemo(() => {
+        // Debug log to verify when traces are regenerated
+        console.log('Regenerating chart traces, sorting state:', table.getState().sorting);
+        if (initialTraces) return initialTraces;
+        if (!data || !xAccessor || !yAccessor) return [];
+        
+        // Use sorted rows from the table instead of raw data to reflect table sorting
+        const sortedRows = table.getRowModel().rows;
+        const sortedData = sortedRows.map(row => row.original);
+        
+        const xValues = sortedData.map(d => d[xAccessor]);
+        const yValues = sortedData.map(d => d[yAccessor]);
+        
+        // Calculate average value
+        const averageValue = yValues.reduce((sum, val) => sum + val, 0) / yValues.length;
+        const averageLine = {
+            x: xValues,
+            y: Array(yValues.length).fill(averageValue),
+            type: 'scatter',
+            mode: 'lines',
+            line: {
+                color: '#FFA500', // Orange color for average line
+                width: 2,
+                dash: 'dash'
+            },
+            name: `Avg: ${averageValue.toFixed(1)}`,
+            hoverinfo: 'y+name',
+            hovertemplate: 'Avg: %{y:,.1f}<extra></extra>',
+            showlegend: true
+        };
+
+        // Calculate trend line (linear regression)
+        const n = yValues.length;
+        const xSum = yValues.reduce((sum, _, i) => sum + i, 0);
+        const ySum = yValues.reduce((sum, val) => sum + val, 0);
+        const xySum = yValues.reduce((sum, val, i) => sum + (i * val), 0);
+        const xSquaredSum = yValues.reduce((sum, _, i) => sum + (i * i), 0);
+        
+        const slope = (n * xySum - xSum * ySum) / (n * xSquaredSum - xSum * xSum);
+        const intercept = (ySum - slope * xSum) / n;
+        
+        const trendY = yValues.map((_, i) => slope * i + intercept);
+        const trendLine = {
+            x: xValues,
+            y: trendY,
+            type: 'scatter',
+            mode: 'lines',
+            line: {
+                color: '#FF4500', // Orange-red color for trend line
+                width: 2
+            },
+            name: 'Trend',
+            hoverinfo: 'y+name',
+            hovertemplate: 'Trend: %{y:,.1f}<extra></extra>',
+            showlegend: true
+        };
+
+        // Main data trace
+        const mainTrace = {
+            x: xValues,
+            y: yValues,
+            type: chartType,
+            mode: chartType === 'line' ? 'lines+markers+text' : 'markers',
+            name: yAxisTitle || 'Data',
+            marker: { 
+                color: baseBarColor,
+                size: 8 // Smaller markers for line charts
+            },
+            hovertemplate: `<b>Fiscal Year:</b> %{x}<br><b>Month:</b> ${xAxisTitle || 'Month'}<br><b>Volume:</b> %{y:,.0f}<extra></extra>`,
+            text: yValues.map(String), // Always show text labels for both bar and line
+            textposition: chartType === 'line' ? 'top' : 'inside',
+            texttemplate: '%{y:,.0f}',
+            textfont: {
+                color: chartType === 'line' ? 'black' : 'white',
+                size: chartType === 'line' ? 10 : 12,
+                family: 'Arial, sans-serif',
+                weight: 'bold'
+            },
+            insidetextanchor: 'middle',
+            textangle: 0,
+            width: chartType === 'bar' ? 0.8 : undefined,
+            showlegend: true
+        };
+
+        // Return traces based on showTrendLine and showAverageLine props
+        const traces = [mainTrace];
+        if (showAverageLine) traces.push(averageLine);
+        if (showTrendLine) traces.push(trendLine);
+        return traces;
+    }, [table, table.getState().sorting, data, xAccessor, yAccessor, chartType, baseBarColor, highlightBarColor, initialTraces, yAxisTitle]);
+
+    // Chart layout configuration
+    const chartLayout = useMemo(() => ({
+        showlegend: true,
+        legend: {
+            orientation: 'h',
+            y: -0.2, // Position legend below the chart
+            x: 0.5,
+            xanchor: 'center',
+            bgcolor: 'rgba(255, 255, 255, 0.5)',
+            bordercolor: '#ddd',
+            borderwidth: 1
+        },
+        margin: { t: 30, r: 30, l: 50, b: 50 } // Add some margin for the legend
+    }), []);
+    // You might also add logic here to re-calculate traces when data, chartType, or accessors change.
+
+
+    // --- Export Handlers ---
+    const handleExportCsv = useCallback(() => {
+        console.log("Exporting CSV from useChartTableLogic...");
+        try {
+            // Get all rows from the table
+            const rows = table.getRowModel().rows;
+            
+            if (rows.length === 0) {
+                console.warn("No table data to export CSV.");
+                return;
+            }
+            
+            // Get headers from the first row
+            const headers = table.getHeaderGroups()[0].headers.map(header => 
+                header.column.columnDef.header
+            );
+            
+            // Convert rows to CSV format
+            const csvRows = [];
+            
+            // Add header row
+            csvRows.push(headers.join(','));
+            
+            // Add data rows
+            for (const row of rows) {
+                const values = row.getVisibleCells().map(cell => {
+                    // Get the value and escape quotes
+                    let value = cell.getValue();
+                    if (typeof value === 'string') {
+                        // Escape double quotes and wrap in quotes
+                        value = `"${value.replace(/"/g, '""')}"`;
+                    }
+                    return value ?? '';
+                });
+                csvRows.push(values.join(','));
+            }
+            
+            // Create CSV content
+            const csv = csvRows.join('\n');
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            
+            if (link.download !== undefined) { // feature detection
+                link.setAttribute('href', URL.createObjectURL(blob));
+                link.setAttribute('download', `${chartTitle || 'data'}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        } catch (error) {
+            console.error("Error exporting to CSV:", error);
+        }
+    }, [table, chartTitle]); // Dependencies: table instance, chartTitle for filename
+
+    const handleExportPng = useCallback(() => {
+        console.log("Exporting PNG from useChartTableLogic...");
+        // Implement your PNG export logic here, using 'chartRef'
+        if (chartRef.current && Plotly) { // Ensure Plotly is loaded and ref is available
+            Plotly.toImage(chartRef.current, { format: 'png', height: 600, width: 900 }) // Adjust height/width as needed
+                .then(function(url) {
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${chartTitle || 'chart'}.png`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                })
+                .catch(function(err) {
+                    console.error('Error exporting chart as PNG:', err);
+                });
+        } else {
+            console.warn("Chart ref or Plotly not available for PNG export.");
+        }
+    }, [chartRef, chartTitle]); // Dependencies: chartRef, chartTitle for filename
+    
+    // Function to explicitly refresh the chart (useful for table sort events)
+    const refreshChart = useCallback(() => {
+        if (chartRef.current && window.Plotly) {
+            // Force re-render of the chart with current traces and layout
+            const layout = {
+                title: chartTitle,
+                xaxis: { 
+                    title: xAxisTitle,
+                    type: xAxisType, // Use the xAxisType parameter
+                    categoryorder: 'trace'
+                },
+                yaxis: { 
+                    title: yAxisTitle, 
+                    tickformat: ',d',
+                    fixedrange: true // Keep Y axis scale consistent
+                }
+            };
+            
+            // Use Plotly.react to refresh the chart with basic config
+            const config = { responsive: true, displayModeBar: false };
+            Plotly.react(chartRef.current, chartTraces, layout, config);
+        }
+    }, [chartRef, chartTraces, chartTitle, xAxisTitle, yAxisTitle, xAxisType]);
+    
+    // Return main hook object with all state, refs, handlers, and functionality
+    return {
+        // Table functionality
+        table,
+        
+        // Splitter functionality
+        splitPos,
+        isDragging,
+        handleMouseDown,
+        containerRef,
+        disabledPointerEventsClass: isDragging ? 'pointer-events-none' : '',
+        
+        // Chart functionality
+        chartRef,
+        chartType,
+        setChartType,
+        refreshChart, // Add refreshChart function to the returned object
+        chartTraces,
+        chartLayout,
+        
+        // Export handlers
+        handleExportCsv,
+        handleExportPng,
+    };
+}
+
+
+// ===== C:\Users\mhali\OneDrive\Documents\NewDashboard\my-dashboard\src\hooks\useChartTableLogic.jsx =====
+// src/hooks/useChartTableLogic.jsx
+
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useDraggableSplitter } from './useDraggableSplitter.js';
+import Plotly from 'plotly.js-dist-min';
+import {
+    useReactTable,
+    getCoreRowModel,
+    getSortedRowModel,
+    getPaginationRowModel,
+} from '@tanstack/react-table';
+import * as XLSX from 'xlsx';
+
+export function useChartTableLogic({
+    data,
+    columns,
+    initialTraces,
+    xAccessor,
+    yAccessor,
+    splitterOrientation,
+    initialSplitPos,
+    chartType: propChartType,
+    chartTitle,
+}) {
+    const [chartType, setChartType] = useState(propChartType || 'bar');
+    const [sorting, setSorting] = useState([]);
+    const chartRef = useRef(null);
+    const containerRef = useRef(null);
+
+    const { splitPos, isDragging, handleMouseDown } = useDraggableSplitter(
+        containerRef,
+        initialSplitPos,
+        splitterOrientation,
+    );
+
+    console.log('useChartTableLogic - data before table creation:', data);
+    console.log('useChartTableLogic - columns before table creation:', columns);
+    
+    const table = useReactTable({
+        data: Array.isArray(data) ? data : [],
+        columns: Array.isArray(columns) ? columns : [],
+        state: { sorting },
+        onSortingChange: setSorting,
+        getCoreRowModel: getCoreRowModel(),
+        getSortedRowModel: getSortedRowModel(),
+        getPaginationRowModel: getPaginationRowModel(),
+    });
+    
+    console.log('useChartTableLogic - table after creation:', table);
+
+    const chartTraces = useMemo(() => {
+        if (initialTraces) {
+            return initialTraces.map(trace => ({
+                ...trace,
+                type: chartType,
+                mode: chartType === 'line' ? 'lines+markers' : trace.mode,
+            }));
+        }
+        if (!data || !xAccessor || !yAccessor) return [];
+
+        const sortedData = table.getRowModel().rows.map(row => row.original);
+        return [{
+            x: sortedData.map(d => d[xAccessor]),
+            y: sortedData.map(d => d[yAccessor]),
+            type: chartType,
+            mode: chartType === 'line' ? 'lines+markers' : undefined,
+            marker: { color: '#3498db' },
+        }];
+    }, [initialTraces, data, xAccessor, yAccessor, chartType, sorting, table]);
+
+    const handleExportCsv = useCallback(() => {
+        const rows = table.getCoreRowModel().rows.map(row => row.original);
+        if (rows.length > 0) {
+            const worksheet = XLSX.utils.json_to_sheet(rows);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Data');
+            XLSX.writeFile(workbook, `${chartTitle || 'data'}.xlsx`);
+        }
+    }, [table, chartTitle]);
+
+    const handleExportPng = useCallback(() => {
+        if (chartRef.current) {
+            Plotly.toImage(chartRef.current, { format: 'png', height: 600, width: 900 })
+                .then(url => {
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${chartTitle || 'chart'}.png`;
+                    a.click();
+                });
+        }
+    }, [chartRef, chartTitle]);
+    
+    const refreshChart = useCallback(() => {}, []);
+
+    return {
+        chartType, setChartType, table, chartTraces, chartRef,
+        handleExportCsv, handleExportPng, refreshChart,
+        containerRef, splitPos, isDragging, handleMouseDown,
+    };
+}
+
+
+
 // ===== C:\Users\mhali\OneDrive\Documents\NewDashboard\my-dashboard\src\hooks\useDraggableSplitter.js =====
 // src/hooks/useDraggableSplitter.js
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react'; // Added useCallback
 
 export function useDraggableSplitter(containerRef, initialSplitPos, orientation, onDrag) {
     const [splitPos, setSplitPos] = useState(initialSplitPos);
     const [isDragging, setIsDragging] = useState(false);
     const animationFrameId = useRef(null);
 
+    // Define onMouseMove and onMouseUp as useCallback to ensure stable references
+    const onMouseMove = useCallback((e) => {
+        if (!containerRef.current || !isDragging) return;
+
+        cancelAnimationFrame(animationFrameId.current);
+        animationFrameId.current = requestAnimationFrame(() => {
+            const { left, top, width, height } = containerRef.current.getBoundingClientRect();
+            let newPos;
+            if (orientation === 'vertical') {
+                // Ensure newPos stays within 20% and 80% bounds
+                newPos = Math.max(20, Math.min(80, ((e.clientX - left) / width) * 100));
+            } else {
+                newPos = Math.max(20, Math.min(80, ((e.clientY - top) / height) * 100));
+            }
+            setSplitPos(newPos);
+            if (onDrag) onDrag(newPos); // Call the onDrag callback if provided
+        });
+    }, [containerRef, isDragging, orientation, onDrag]); // Dependencies for useCallback
+
+    const onMouseUp = useCallback(() => {
+        setIsDragging(false);
+        // Remove global event listeners after drag ends
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('mouseup', onMouseUp);
+        if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current);
+    }, [onMouseMove]); // Dependency for useCallback
+
+    // The handler that starts the drag operation, now returned from the hook
+    const handleMouseDown = useCallback((e) => {
+        e.preventDefault(); // Prevent default browser drag behavior
+        setIsDragging(true);
+        // Add global event listeners when drag starts
+        window.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('mouseup', onMouseUp);
+    }, [onMouseMove, onMouseUp]); // Dependencies for useCallback
+
+    // Cleanup effect for when the component unmounts or dependencies change
     useEffect(() => {
-        const onMouseMove = (e) => {
-            if (!containerRef.current || !isDragging) return;
-
-            cancelAnimationFrame(animationFrameId.current);
-            animationFrameId.current = requestAnimationFrame(() => {
-                const { left, top, width, height } = containerRef.current.getBoundingClientRect();
-                let newPos;
-                if (orientation === 'vertical') {
-                    newPos = Math.max(20, Math.min(80, ((e.clientX - left) / width) * 100));
-                } else {
-                    newPos = Math.max(20, Math.min(80, ((e.clientY - top) / height) * 100));
-                }
-                setSplitPos(newPos);
-                if (onDrag) onDrag();
-            });
-        };
-
-        const onMouseUp = () => {
-            setIsDragging(false);
+        return () => {
+            // Ensure listeners are removed to prevent memory leaks
             window.removeEventListener('mousemove', onMouseMove);
             window.removeEventListener('mouseup', onMouseUp);
+            if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current);
         };
+    }, [onMouseMove, onMouseUp]); // Dependencies for cleanup
 
-        const bar = containerRef.current?.querySelector('#splitter');
-        const onMouseDown = (e) => {
-            e.preventDefault();
-            setIsDragging(true);
-            window.addEventListener('mousemove', onMouseMove);
-            window.addEventListener('mouseup', onMouseUp);
-        };
-
-        if (bar) {
-            bar.addEventListener('mousedown', onMouseDown);
-            return () => {
-                bar.removeEventListener('mousedown', onMouseDown);
-                window.removeEventListener('mousemove', onMouseMove);
-                window.removeEventListener('mouseup', onMouseUp);
-                if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current);
-            };
-        }
-    }, [containerRef, isDragging, orientation, onDrag]);
-
-    return { splitPos, isDragging };
+    // Return the state and handler that the component needs
+    return { splitPos, isDragging, handleMouseDown };
 }
 
 
@@ -1336,6 +2599,193 @@ export function usePlotlyChart({
         }
     }, [data, updateChart, isDragging, isLoading, hasData, showChartPanel]);
 }
+
+
+// ===== C:\Users\mhali\OneDrive\Documents\NewDashboard\my-dashboard\src\pages\DeptActivity.jsx =====
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import { useLayout } from '../contexts/LayoutContext';
+import { RiLoader5Fill } from 'react-icons/ri';
+import { FaBuilding, FaLandmark, FaClipboardCheck } from 'react-icons/fa';
+import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+
+import PSCActivityReport from '../components/DeptActivity/PSCActivityReport';
+import LUActivityReport from '../components/DeptActivity/LUActivityReport';
+import PLNCheckActivityReport from '../components/DeptActivity/PLNCheckActivityReport';
+import MultiSelectDropdown from '../components/common/MultiSelectDropdown';
+
+export default function DeptActivity() {
+    const { setTitle } = useLayout();
+    const [activityData, setActivityData] = useState([]);
+    const [isLoadingData, setIsLoadingData] = useState(true);
+    const [globalError, setGlobalError] = useState(null);
+    const [activeActivityType, setActiveActivityType] = useState('PSC');
+    const [selectedYears, setSelectedYears] = useState([]);
+    const [isTabsCollapsed, setIsTabsCollapsed] = useState(true);
+
+    useEffect(() => {
+        setTitle('Department Activity Analysis Dashboard');
+        return () => setTitle('My Dashboard');
+    }, [setTitle]);
+
+    const allYears = useMemo(() => {
+        if (!Array.isArray(activityData) || activityData.length === 0) {
+            return [];
+        }
+        const years = new Set(activityData.map(d => d.year));
+        return Array.from(years).sort((a, b) => b - a);
+    }, [activityData]);
+
+    useEffect(() => {
+        const fetchActivityData = async () => {
+            setIsLoadingData(true);
+            setGlobalError(null);
+            try {
+                const response = await fetch('./data/UniquePermitsAnalysisData/DeptAnnualActivityJson.json');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error during data fetch.`);
+                }
+                
+                const data = await response.json();
+                console.log('Fetched activity data:', data);
+                setActivityData(data);
+            } catch (e) {
+                console.error("Failed to fetch department activity data:", e);
+                setGlobalError("Failed to load department activity data.");
+            } finally {
+                setIsLoadingData(false);
+            }
+        };
+        fetchActivityData();
+    }, []);
+
+    // Select the three most recent years on load
+    useEffect(() => {
+        if (!isLoadingData && allYears.length > 0) {
+            setSelectedYears(allYears.slice(0, 3));
+        }
+    }, [isLoadingData, allYears]);
+
+    const handleYearChange = useCallback((value, isChecked) => {
+        setSelectedYears(prev => isChecked ? [...prev, value] : prev.filter(v => v !== value));
+    }, []);
+
+    const getFilteredData = useCallback((department) => {
+        console.log('Filtering for department:', department);
+        console.log('All activity data:', activityData);
+        console.log('Selected years:', selectedYears);
+        
+        // Check if activityData is empty or not an array
+        if (!Array.isArray(activityData) || activityData.length === 0) {
+            console.error('Activity data is empty or not an array');
+            return [];
+        }
+        
+        let currentData = [...activityData]; // Create a copy to avoid mutation
+        
+        // Filter by department - log all unique departments for debugging
+        console.log('All unique departments:', [...new Set(currentData.map(d => d.department))]);
+        currentData = currentData.filter(d => d.department === department);
+        console.log('After department filter:', currentData);
+        
+        // Filter by selected years
+        if (selectedYears.length > 0) {
+            currentData = currentData.filter(d => selectedYears.includes(d.year));
+            console.log('After year filter:', currentData);
+        }
+        
+        return currentData;
+    }, [activityData, selectedYears]);
+
+    const filteredPSCData = useMemo(() => {
+        const result = getFilteredData('PSC');
+        console.log('Filtered PSC data:', result);
+        return result;
+    }, [getFilteredData]);
+    
+    const filteredLUData = useMemo(() => {
+        const result = getFilteredData('LU');
+        console.log('Filtered LU data:', result);
+        return result;
+    }, [getFilteredData]);
+    
+    const filteredPLNCheckData = useMemo(() => {
+        const result = getFilteredData('PLN Check');
+        console.log('Filtered PLN Check data:', result);
+        return result;
+    }, [getFilteredData]);
+
+    if (isLoadingData) {
+        return (
+            <div className="flex justify-center items-center h-64">
+                <RiLoader5Fill className="animate-spin text-blue-600 w-12 h-12" />
+            </div>
+        );
+    }
+
+    return (
+        <div className="dept-activity-dashboard" id='dept-activity-dashboard'>
+            {globalError && <div className="text-red-600 dark:text-red-400 text-center text-lg mb-4">{globalError}</div>}
+            
+            <div className="md:flex gap-4">
+                <div className={`md:flex-shrink-0 mb-4 md:mb-0 transition-all duration-300 ${isTabsCollapsed ? 'md:w-16' : 'md:w-64'}`}>
+                    <button
+                        onClick={() => setIsTabsCollapsed(!isTabsCollapsed)}
+                        className="hidden md:flex items-center justify-center w-full p-1.5 mb-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg text-gray-700 dark:text-gray-200"
+                        title={isTabsCollapsed ? 'Expand Navigation' : 'Collapse Navigation'}
+                    >
+                        {isTabsCollapsed ? <FaChevronRight className="w-5 h-5" /> : <FaChevronLeft className="w-5 h-5" />}
+                    </button>
+                    <ul className={`flex-column space-y-1 text-sm font-medium text-gray-500 dark:text-gray-400 ${isTabsCollapsed ? 'hidden md:block' : ''}`}>
+                        {[
+                            { type: 'PSC', label: 'PSC Activity', icon: FaBuilding },
+                            { type: 'LU', label: 'LU Activity', icon: FaLandmark },
+                            { type: 'PLN Check', label: 'PLN Check Activity', icon: FaClipboardCheck }
+                        ].map(({ type, label, icon: Icon }) => (
+                            <li key={type} className="relative group">
+                                <button
+                                    className={`inline-flex items-center px-3 py-2 rounded-lg w-full ${activeActivityType === type ? 'text-white bg-blue-700 dark:bg-blue-600' : 'hover:text-gray-900 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:hover:text-white'}`}
+                                    onClick={() => setActiveActivityType(type)}
+                                >
+                                    <Icon className={`w-4 h-4 ${isTabsCollapsed ? 'mx-auto' : 'me-2'} ${activeActivityType === type ? 'text-white' : 'text-gray-500 dark:text-gray-400'}`} />
+                                    {!isTabsCollapsed && label}
+                                </button>
+                                {isTabsCollapsed && (
+                                    <span className="absolute left-full ml-4 top-1/2 -translate-y-1/2 w-auto min-w-max p-2 bg-gray-800 text-white text-xs rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                                        {label}
+                                    </span>
+                                )}
+                            </li>
+                        ))}
+                        {!isTabsCollapsed && (
+                            <li className="p-3 mt-4 border-t border-gray-200 dark:border-gray-700 space-y-4">
+                                <MultiSelectDropdown
+                                    label="Select Years"
+                                    options={allYears.map(y => ({ label: String(y), value: y }))}
+                                    selectedValues={selectedYears}
+                                    onChange={handleYearChange}
+                                />
+                            </li>
+                        )}
+                    </ul>
+                </div>
+
+                <div className="flex-1 min-w-0">
+                    {activeActivityType === 'PSC' && (
+                        <PSCActivityReport data={filteredPSCData} isLoading={isLoadingData} />
+                    )}
+                    {activeActivityType === 'LU' && (
+                        <LUActivityReport data={filteredLUData} isLoading={isLoadingData} />
+                    )}
+                    {activeActivityType === 'PLN Check' && (
+                        <PLNCheckActivityReport data={filteredPLNCheckData} isLoading={isLoadingData} />
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
 
 
 // ===== C:\Users\mhali\OneDrive\Documents\NewDashboard\my-dashboard\src\pages\Home.jsx =====
@@ -1480,7 +2930,7 @@ export default function UniquePermits() {
     const filteredMonthlyData = useMemo(() => getFilteredData(monthlyData, 'monthly'), [monthlyData, getFilteredData]);
 
     return (
-        <div className="unique-permits-dashboard">
+        <div className="unique-permits-dashboard" id='unique-permits-dashboard'>
              {globalError && <div className="text-red-600 dark:text-red-400 text-center text-lg mb-4">{globalError}</div>}
             
             <div className="md:flex gap-4">
@@ -1542,7 +2992,7 @@ export default function UniquePermits() {
                     </ul>
                 </div>
 
-                <div className="w-full bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+                <div id='unique-permits-container' className="w-full bg-white dark:bg-gray-800">
                     {isLoadingAllData ? (
                         <div className="flex flex-col items-center justify-center h-full min-h-[600px]">
                             <RiLoader5Fill className="animate-spin text-blue-500 w-12 h-12 mb-4" />

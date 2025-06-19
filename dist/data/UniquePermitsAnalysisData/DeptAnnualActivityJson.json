@@ -1,0 +1,137 @@
+[
+    {
+      "year": 2017,
+      "activity_count": 6324,
+      "department": "PLN Check"
+    },
+    {
+      "year": 2018,
+      "activity_count": 6537,
+      "department": "PLN Check"
+    },
+    {
+      "year": 2019,
+      "activity_count": 6948,
+      "department": "PLN Check"
+    },
+    {
+      "year": 2020,
+      "activity_count": 6035,
+      "department": "PLN Check"
+    },
+    {
+      "year": 2021,
+      "activity_count": 6160,
+      "department": "PLN Check"
+    },
+    {
+      "year": 2022,
+      "activity_count": 9589,
+      "department": "PLN Check"
+    },
+    {
+      "year": 2023,
+      "activity_count": 8201,
+      "department": "PLN Check"
+    },
+    {
+      "year": 2024,
+      "activity_count": 3971,
+      "department": "PLN Check"
+    },
+    {
+      "year": 2025,
+      "activity_count": 2951,
+      "department": "PLN Check"
+    },
+    {
+      "year": 2017,
+      "activity_count": 4042,
+      "department": "LU"
+    },
+    {
+      "year": 2018,
+      "activity_count": 3906,
+      "department": "LU"
+    },
+    {
+      "year": 2019,
+      "activity_count": 4288,
+      "department": "LU"
+    },
+    {
+      "year": 2020,
+      "activity_count": 3841,
+      "department": "LU"
+    },
+    {
+      "year": 2021,
+      "activity_count": 3976,
+      "department": "LU"
+    },
+    {
+      "year": 2022,
+      "activity_count": 4515,
+      "department": "LU"
+    },
+    {
+      "year": 2023,
+      "activity_count": 4288,
+      "department": "LU"
+    },
+    {
+      "year": 2024,
+      "activity_count": 4520,
+      "department": "LU"
+    },
+    {
+      "year": 2025,
+      "activity_count": 3747,
+      "department": "LU"
+    },
+    {
+      "year": 2017,
+      "activity_count": 20752,
+      "department": "PSC"
+    },
+    {
+      "year": 2018,
+      "activity_count": 22823,
+      "department": "PSC"
+    },
+    {
+      "year": 2019,
+      "activity_count": 21128,
+      "department": "PSC"
+    },
+    {
+      "year": 2020,
+      "activity_count": 16839,
+      "department": "PSC"
+    },
+    {
+      "year": 2021,
+      "activity_count": 14924,
+      "department": "PSC"
+    },
+    {
+      "year": 2022,
+      "activity_count": 15456,
+      "department": "PSC"
+    },
+    {
+      "year": 2023,
+      "activity_count": 16723,
+      "department": "PSC"
+    },
+    {
+      "year": 2024,
+      "activity_count": 22323,
+      "department": "PSC"
+    },
+    {
+      "year": 2025,
+      "activity_count": 19705,
+      "department": "PSC"
+    }
+  ]
