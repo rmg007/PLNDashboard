@@ -250,7 +250,7 @@ export default function QuarterlyUniquePermitsReport({ data, isLoading }) {
                 </div>
                 
                 {/* --- Chart 1: Grouped Bar Chart --- */}
-                <div id='quarterly-grouped-report-div' className="bg-white dark:bg-gray-800/50 p-4 rounded-lg shadow mb-8" id='quarterly-grouped-report'>
+                <div className="bg-white dark:bg-gray-800/50 p-4 rounded-lg shadow mb-8" id='quarterly-grouped-report'>
                     <ChartTableComponent id='chart1_Quarterly'
                         data={data}
                         columns={baseQuarterlyColumns}
