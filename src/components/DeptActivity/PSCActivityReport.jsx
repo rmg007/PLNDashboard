@@ -251,6 +251,12 @@ export default function PSCActivityReport({ data, isLoading }) {
                     showPagination={false}
                     showChartTypeSwitcher={true}
                     chartType="bar"
+                    chartLayout={{
+                        legend: {
+                            orientation: 'h',
+                            y: -0.2
+                        }
+                    }}
                 />
             </div>
             

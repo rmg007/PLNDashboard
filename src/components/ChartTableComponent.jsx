@@ -72,8 +72,11 @@ export default function ChartTableComponent(props) {
     // Generate chart traces based on data and settings
     const chartTraces = useMemo(() => {
         if (traces) {
+            let finalTraces = [];
+            
+            // Process traces based on chart type
             if (chartType === 'line') {
-                return traces.map(trace => {
+                finalTraces = traces.map(trace => {
                     // For chartPSCActivity or when showLineLabels is true, add text labels to line charts
                     if (id === 'chartPSCActivity' || showLineLabels) {
                         return { 
@@ -91,8 +94,65 @@ export default function ChartTableComponent(props) {
                     }
                     return { ...trace, type: 'scatter', mode: 'lines+markers' };
                 });
+            } else {
+                finalTraces = [...traces];
             }
-            return traces;
+            
+            // Add average line if enabled and we have trace data
+            if (showAverageLine && traces.length > 0 && traces[0].y && traces[0].y.length > 0) {
+                // Calculate average from the first trace (main data series)
+                const yValues = traces[0].y;
+                const average = yValues.reduce((a, b) => a + b, 0) / yValues.length;
+                
+                // Get x-axis range for the average line
+                const xValues = traces[0].x;
+                
+                // Add average line trace
+                finalTraces.push({
+                    x: [xValues[0], xValues[xValues.length - 1]],
+                    y: [average, average],
+                    type: 'scatter',
+                    mode: 'lines',
+                    name: `Average: ${average.toLocaleString()}`,
+                    line: { color: '#ff7f0e', dash: 'dash', width: 2 },
+                    hoverinfo: 'name'
+                });
+            }
+            
+            // Add trend line if enabled and we have trace data
+            if (showTrendLine && traces.length > 0 && traces[0].y && traces[0].y.length > 1) {
+                const yValues = traces[0].y;
+                const xValues = traces[0].x;
+                const n = yValues.length;
+                
+                // Create x indices for calculation (0, 1, 2, ...)
+                const xIndices = Array.from({length: n}, (_, i) => i);
+                
+                // Calculate linear regression
+                const sumX = xIndices.reduce((a, b) => a + b, 0);
+                const sumY = yValues.reduce((a, b) => a + b, 0);
+                const sumXY = xIndices.map((xi, i) => xi * yValues[i]).reduce((a, b) => a + b, 0);
+                const sumXX = xIndices.map(xi => xi * xi).reduce((a, b) => a + b, 0);
+                
+                const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+                const intercept = (sumY - slope * sumX) / n;
+                
+                // Calculate trend line y values
+                const trendY = xIndices.map(xi => slope * xi + intercept);
+                
+                // Add trend line trace
+                finalTraces.push({
+                    x: xValues,
+                    y: trendY,
+                    type: 'scatter',
+                    mode: 'lines',
+                    name: 'Trend',
+                    line: { color: '#d62728', width: 2 },
+                    hoverinfo: 'name'
+                });
+            }
+            
+            return finalTraces;
         }
 
         if (!data || !xAccessor || !yAccessor) return [];

@@ -252,6 +252,12 @@ export default function PLNCheckActivityReport({ data, isLoading }) {
                     showChartTypeSwitcher={true}
                     chartType="bar"
                     showLineLabels={true}
+                    chartLayout={{
+                        legend: {
+                            orientation: 'h',
+                            y: -0.2
+                        }
+                    }}
                 />
             </div>
             
