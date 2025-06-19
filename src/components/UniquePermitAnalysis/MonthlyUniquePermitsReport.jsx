@@ -125,6 +125,7 @@ export default function MonthlyUniquePermitsReport({ data, isLoading }) {
         text: monthlyValues.map(val => val > 0 ? val.toString() : ''),
         textposition: 'inside',
         insidetextanchor: 'middle',
+        textangle: -90,
         textfont: {
           size: 11,
           color: 'white',
