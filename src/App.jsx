@@ -4,6 +4,7 @@ import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout.jsx';
 import PageSkeleton from './components/Common/PageSkeleton';
 import ErrorBoundary from './components/Common/ErrorBoundary';
+import { FilterProvider } from './contexts/FilterContext';
 
 // Lazy load heavy components
 const Home = lazy(() => import('./pages/Home.jsx'));
@@ -15,8 +16,9 @@ export default function App() {
     <Router>
       <ErrorBoundary>
         <Suspense fallback={<PageSkeleton />}>
-          <Routes>
-            <Route path="/" element={<Layout />}>
+          <FilterProvider>
+            <Routes>
+              <Route path="/" element={<Layout />}>
               <Route 
                 index 
                 element={
@@ -71,8 +73,9 @@ export default function App() {
                 </ErrorBoundary>
               }
             />
-            </Route>
-          </Routes>
+              </Route>
+            </Routes>
+          </FilterProvider>
         </Suspense>
       </ErrorBoundary>
     </Router>

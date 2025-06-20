@@ -2,9 +2,11 @@ import { Suspense, useEffect, useState, useRef } from 'react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { useLayout } from '../contexts/LayoutContext';
 import { useTheme, useIsDark } from '../contexts/ThemeContext';
+import { useFilter } from '../contexts/FilterContext';
 import { useId } from 'react';
 import LayoutSkeleton from './Common/LayoutSkeleton';
-import { FiSun, FiMoon, FiMenu, FiPieChart } from 'react-icons/fi';
+import { FiSun, FiMoon, FiMenu, FiPieChart, FiFilter } from 'react-icons/fi';
+import FilterPanel from './Filters/FilterPanel';
 import { FaChevronDown } from 'react-icons/fa';
 import { FaListCheck } from 'react-icons/fa6';
 import { ImCalendar } from 'react-icons/im';
@@ -17,9 +19,11 @@ export default function Layout() {
   const navId = useId();
   const { theme, setTheme } = useTheme();
   const isDark = useIsDark();
+  const { isFilterVisible, setIsFilterVisible } = useFilter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [openSubmenus, setOpenSubmenus] = useState({});
   const menuRefs = useRef({});
+  const filterPanelRef = useRef(null);
   
   // Generate unique IDs for navigation items
   const navItems = [
@@ -53,20 +57,31 @@ export default function Layout() {
     setTheme(theme === 'dark' ? 'light' : 'dark');
   };
 
+  const toggleFilterPanel = () => {
+    setIsFilterVisible(prev => !prev);
+  };
+
   // Close mobile menu and submenus when route changes
   useEffect(() => {
     setIsMobileMenuOpen(false);
     setOpenSubmenus({});
   }, [location]);
 
-  // Close submenus when clicking outside
+  // Close submenus and filter panel when clicking outside
   useEffect(() => {
     function handleClickOutside(event) {
+      // Close submenus when clicking outside
       Object.keys(menuRefs.current).forEach(key => {
         if (menuRefs.current[key] && !menuRefs.current[key].contains(event.target)) {
           setOpenSubmenus(prev => ({ ...prev, [key]: false }));
         }
       });
+      
+      // Close filter panel when clicking outside
+      if (filterPanelRef.current && !filterPanelRef.current.contains(event.target) && 
+          !event.target.closest('[data-filter-toggle]')) {
+        setIsFilterVisible(false);
+      }
     }
     
     document.addEventListener('mousedown', handleClickOutside);
@@ -174,6 +189,16 @@ export default function Layout() {
             {/* Theme Toggle and Mobile Menu Button */}
             <div className="flex items-center space-x-2">
               <button
+                onClick={toggleFilterPanel}
+                data-filter-toggle
+                aria-label="Toggle filter panel"
+                aria-expanded={isFilterVisible}
+                className="p-2 rounded-full text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-colors"
+              >
+                <FiFilter className={`w-5 h-5 ${isFilterVisible ? 'text-blue-500 dark:text-blue-400' : ''}`} />
+              </button>
+              
+              <button
                 onClick={toggleTheme}
                 aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`}
                 className="p-2 rounded-full text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 transition-colors"
@@ -272,6 +297,17 @@ export default function Layout() {
           </div>
         )}
       </header>
+      {/* Filter Panel */}
+      {isFilterVisible && (
+        <div 
+          ref={filterPanelRef}
+          className="fixed right-0 top-16 h-full w-72 bg-white dark:bg-gray-800 shadow-lg z-20 transform transition-transform duration-300 ease-in-out border-l border-gray-200 dark:border-gray-700 overflow-y-auto"
+          aria-labelledby="filter-panel-title"
+        >
+          <FilterPanel />
+        </div>
+      )}
+      
       <main 
         id="main-content" 
         className="flex-1 px-4 py-6 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full"
