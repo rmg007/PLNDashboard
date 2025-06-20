@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useId } from 'react';
 import Plotly from 'plotly.js-dist-min';
 
 /**
@@ -12,15 +12,35 @@ import Plotly from 'plotly.js-dist-min';
  * @param {string} props.trendValue - Value representing the trend (e.g., "+12%")
  * @param {string} props.color - Accent color for the card (tailwind class)
  */
+/**
+ * KPI Card component with sparkline visualization
+ * @param {Object} props - Component props
+ * @param {string} props.id - Unique ID for the card
+ * @param {string} props.title - Card title
+ * @param {string|number} props.value - Main KPI value to display
+ * @param {string} props.icon - Icon class or emoji
+ * @param {Array} props.sparklineData - Array of data points for the sparkline
+ * @param {string} props.trend - 'up', 'down', or 'neutral'
+ * @param {string} props.trendValue - Value representing the trend (e.g., "+12%")
+ * @param {string} props.color - Accent color for the card (tailwind class)
+ * @param {string} props.ariaDescribedby - ID of element that describes the card
+ */
 const KPICard = ({ 
+  id,
   title, 
   value, 
   icon, 
   sparklineData = [], 
   trend = 'neutral', 
   trendValue = '', 
-  color = 'blue' 
+  color = 'blue',
+  'aria-describedby': ariaDescribedby
 }) => {
+  const componentId = useId();
+  const cardId = id || `kpi-card-${componentId}`;
+  const titleId = `${cardId}-title`;
+  const valueId = `${cardId}-value`;
+  const trendId = `${cardId}-trend`;
   const sparklineRef = useRef(null);
   
   // Color mapping for trends
@@ -93,28 +113,66 @@ const KPICard = ({
     };
   }, [sparklineData, trend]);
   
+  // Accessibility: Get the trend description for screen readers
+  const getTrendDescription = () => {
+    if (trend === 'up') return `increased by ${trendValue}`;
+    if (trend === 'down') return `decreased by ${trendValue}`;
+    return `remained stable with ${trendValue} change`;
+  };
+
   return (
-    <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 border-l-4 border-${color}-500 h-full kpi-card`}>
+    <article 
+      id={cardId}
+      className={`bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 border-l-4 border-${color}-500 h-full kpi-card`}
+      aria-labelledby={titleId}
+      aria-describedby={ariaDescribedby}
+      role="region"
+    >
       <div className="flex justify-between items-start">
         <div>
-          <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">{title}</h3>
+          <h3 
+            id={titleId}
+            className="text-sm font-medium text-gray-500 dark:text-gray-400"
+          >
+            {title}
+          </h3>
           <div className="flex items-baseline mt-1">
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">{value}</p>
+            <p 
+              id={valueId}
+              className="text-2xl font-bold text-gray-900 dark:text-white"
+              aria-atomic="true"
+            >
+              {value}
+            </p>
             {trendValue && (
-              <span className={`ml-2 text-sm font-medium ${trendColors[trend]}`}>
-                {trendIcons[trend]} {trendValue}
+              <span 
+                id={trendId}
+                className={`ml-2 text-sm font-medium ${trendColors[trend]}`}
+                aria-label={getTrendDescription()}
+              >
+                <span aria-hidden="true">{trendIcons[trend]} {trendValue}</span>
               </span>
             )}
           </div>
         </div>
-        <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-full">
+        <div 
+          className="p-2 bg-gray-100 dark:bg-gray-700 rounded-full"
+          aria-hidden="true"
+        >
           <span className="text-xl">{icon}</span>
         </div>
       </div>
       <div className="mt-4">
-        <div ref={sparklineRef} className="w-full h-12"></div>
+        <div 
+          ref={sparklineRef} 
+          className="w-full h-12"
+          aria-hidden="true"
+        ></div>
+        <span className="sr-only">
+          {`Data trend visualization ${trend === 'up' ? 'increasing' : trend === 'down' ? 'decreasing' : 'stable'}`}
+        </span>
       </div>
-    </div>
+    </article>
   );
 };
 

@@ -1,13 +1,21 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useId } from 'react';
 import Plotly from 'plotly.js-dist-min';
 
 /**
  * Permit Type Pie Chart component
  * @param {Object} props - Component props
  * @param {Array} props.data - Data for the pie chart
+ * @param {string} props.ariaLabelledBy - ID of the element that labels this chart
+ * @param {string} props.id - Optional custom ID for the chart container
  */
-const PermitTypePieChart = ({ data = [] }) => {
+const PermitTypePieChart = ({ 
+  data = [], 
+  ariaLabelledBy,
+  id: propId 
+}) => {
   const chartRef = useRef(null);
+  const generatedId = useId();
+  const chartId = propId || `permit-type-chart-${generatedId}`;
 
   useEffect(() => {
     if (!chartRef.current || !data || data.length === 0) return;
@@ -66,10 +74,40 @@ const PermitTypePieChart = ({ data = [] }) => {
     };
   }, [data]);
 
+  // Generate a description for screen readers
+  const getAccessibilityDescription = () => {
+    if (!data || data.length === 0) return 'No data available';
+    
+    const total = data.reduce((sum, item) => sum + (item.value || 0), 0);
+    const items = data.map(item => 
+      `${item.category}: ${Math.round((item.value / total) * 100)}%`
+    ).join(', ');
+    
+    return `Pie chart showing distribution of permit types: ${items}`;
+  };
+
   return (
-    <div className="h-full">
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Permit Types</h3>
-      <div ref={chartRef} className="w-full h-[200px]"></div>
+    <div 
+      className="h-full"
+      role="region"
+      aria-labelledby={ariaLabelledBy}
+      aria-describedby={`${chartId}-desc`}
+    >
+      <h3 
+        id={ariaLabelledBy}
+        className="text-lg font-semibold text-gray-900 dark:text-white mb-2"
+      >
+        Permit Types
+      </h3>
+      <div 
+        ref={chartRef} 
+        id={chartId}
+        className="w-full h-[200px]"
+        aria-hidden="true"
+      ></div>
+      <div id={`${chartId}-desc`} className="sr-only">
+        {getAccessibilityDescription()}
+      </div>
     </div>
   );
 };

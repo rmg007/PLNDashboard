@@ -45,9 +45,7 @@ export default function PSCActivityReport({ data, isLoading }) {
         fetchWeekdayData();
     }, []);
     
-    console.log('PSCActivityReport - data:', data);
-    console.log('PSCActivityReport - isLoading:', isLoading);
-    console.log('PSCActivityReport - weekdayData:', weekdayData);
+    // PSC Activity Report - Data loaded
     // Define columns for the activity table using modern @tanstack/react-table v8 syntax
     const columns = useMemo(() => [
         {
@@ -97,7 +95,7 @@ export default function PSCActivityReport({ data, isLoading }) {
     // Create traces for the activity chart
     const traces = useMemo(() => {
         if (!data || !Array.isArray(data) || data.length === 0) {
-            console.log('PSCActivityReport - No data available for traces');
+            // No data available for PSC traces
             return [];
         }
 
@@ -124,7 +122,7 @@ export default function PSCActivityReport({ data, isLoading }) {
     // Create traces for the weekday chart (grouped by year)
     const weekdayTraces = useMemo(() => {
         if (!weekdayData || !Array.isArray(weekdayData) || weekdayData.length === 0) {
-            console.log('PSCActivityReport - No weekday data available for traces');
+            // No weekday data available for PSC traces
             return [];
         }
 
@@ -158,7 +156,7 @@ export default function PSCActivityReport({ data, isLoading }) {
     // Create traces for the weekday chart (grouped by day)
     const weekdayByDayTraces = useMemo(() => {
         if (!weekdayData || !Array.isArray(weekdayData) || weekdayData.length === 0) {
-            console.log('PSCActivityReport - No weekday data available for day-grouped traces');
+            // No weekday data available for day-grouped PSC traces
             return [];
         }
 

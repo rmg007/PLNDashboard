@@ -2,9 +2,40 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
+    <!-- Theme-aware favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon-light.svg" id="favicon" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark">
     <title>My Dashboard</title>
+    <script>
+      // Check for saved theme preference or use system preference
+      const savedTheme = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const isDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
+      
+      // Set initial favicon
+      const favicon = document.getElementById('favicon');
+      if (favicon) {
+        favicon.href = isDark ? '/favicon-dark.svg' : '/favicon-light.svg';
+      }
+      
+      // Listen for theme changes
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          if (mutation.attributeName === 'class') {
+            const isDark = document.documentElement.classList.contains('dark');
+            if (favicon) {
+              favicon.href = isDark ? '/favicon-dark.svg' : '/favicon-light.svg';
+            }
+          }
+        });
+      });
+      
+      observer.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['class']
+      });
+    </script>
   </head>
   <body>
     <div id="root"></div>

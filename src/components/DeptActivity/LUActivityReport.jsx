@@ -45,9 +45,7 @@ export default function LUActivityReport({ data, isLoading }) {
         fetchWeekdayData();
     }, []);
     
-    console.log('LUActivityReport - data:', data);
-    console.log('LUActivityReport - isLoading:', isLoading);
-    console.log('LUActivityReport - weekdayData:', weekdayData);
+    // LU Activity Report - Data loaded
     // Define columns for the activity table using modern v8 syntax
     const columns = useMemo(() => [
         {
@@ -97,13 +95,13 @@ export default function LUActivityReport({ data, isLoading }) {
     // Create traces for the activity chart
     const traces = useMemo(() => {
         if (!data || !Array.isArray(data) || data.length === 0) {
-            console.log('LUActivityReport - No data available for traces');
+            // No data available for LU traces
             return [];
         }
 
         // Sort data by year
         const sortedData = [...data].sort((a, b) => a.year - b.year);
-        console.log('LUActivityReport - Sorted data for traces:', sortedData);
+        // Data sorted for LU traces
         
         return [{
             x: sortedData.map(item => item.year),
@@ -125,7 +123,7 @@ export default function LUActivityReport({ data, isLoading }) {
     // Create traces for the weekday chart
     const weekdayTraces = useMemo(() => {
         if (!weekdayData || !Array.isArray(weekdayData) || weekdayData.length === 0) {
-            console.log('LUActivityReport - No weekday data available for traces');
+            // No weekday data available for LU traces
             return [];
         }
 
@@ -159,7 +157,7 @@ export default function LUActivityReport({ data, isLoading }) {
     // Create traces for the weekday chart (grouped by day)
     const weekdayByDayTraces = useMemo(() => {
         if (!weekdayData || !Array.isArray(weekdayData) || weekdayData.length === 0) {
-            console.log('LUActivityReport - No weekday data available for day-grouped traces');
+            // No weekday data available for day-grouped LU traces
             return [];
         }
 

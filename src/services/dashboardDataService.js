@@ -10,14 +10,23 @@
  * @returns {Promise<Array>} Data from the JSON file
  */
 const fetchJsonData = async (fileName) => {
+  const url = `/data/UniquePermitsAnalysisData/${fileName}`;
+  console.log(`Fetching data from: ${url}`);
+  
   try {
-    const response = await fetch(`/data/UniquePermitsAnalysisData/${fileName}`);
+    const response = await fetch(url);
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Error response for ${fileName}: ${response.status} ${response.statusText}`, errorText);
       throw new Error(`Failed to fetch ${fileName}: ${response.status} ${response.statusText}`);
     }
-    return await response.json();
+    
+    const data = await response.json();
+    console.log(`Successfully loaded ${fileName}:`, Array.isArray(data) ? `${data.length} items` : 'Object data');
+    return data;
   } catch (error) {
     console.error(`Error fetching ${fileName}:`, error);
+    // Return empty array for array-expected data, empty object for object-expected data
     return [];
   }
 };

@@ -1,30 +1,80 @@
+import { Suspense, lazy } from 'react';
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 
 import Layout from './components/Layout.jsx';
-import Home from './pages/Home.jsx';
-import UniquePermits from './pages/UniquePermits.jsx';
-import DeptActivity from './pages/DeptActivity.jsx';
+import PageSkeleton from './components/Common/PageSkeleton';
+import ErrorBoundary from './components/Common/ErrorBoundary';
+
+// Lazy load heavy components
+const Home = lazy(() => import('./pages/Home.jsx'));
+const UniquePermits = lazy(() => import('./pages/UniquePermits.jsx'));
+const DeptActivity = lazy(() => import('./pages/DeptActivity.jsx'));
 
 export default function App() {
   return (
     <Router>
-      <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<Home />} />
-          
-          {/* Unique Permits Routes */}
-          <Route path="uniquepermits" element={<UniquePermits />}>
-            <Route index element={<UniquePermits />} />
-            <Route path=":reportType" element={<UniquePermits />} />
-          </Route>
-          
-          {/* Department Activity Routes */}
-          <Route path="deptactivity" element={<DeptActivity />}>
-            <Route index element={<DeptActivity />} />
-            <Route path=":deptType" element={<DeptActivity />} />
-          </Route>
-        </Route>
-      </Routes>
+      <ErrorBoundary>
+        <Suspense fallback={<PageSkeleton />}>
+          <Routes>
+            <Route path="/" element={<Layout />}>
+              <Route 
+                index 
+                element={
+                  <ErrorBoundary>
+                    <Suspense fallback={<PageSkeleton />}>
+                      <Home />
+                    </Suspense>
+                  </ErrorBoundary>
+                } 
+              />
+              
+              {/* Unique Permits Routes */}
+              <Route 
+                path="uniquepermits" 
+                element={
+                  <ErrorBoundary>
+                    <Suspense fallback={<PageSkeleton />}>
+                      <UniquePermits />
+                    </Suspense>
+                  </ErrorBoundary>
+                }
+              />
+              <Route 
+                path="uniquepermits/:reportType" 
+                element={
+                  <ErrorBoundary>
+                    <Suspense fallback={<PageSkeleton />}>
+                      <UniquePermits />
+                    </Suspense>
+                  </ErrorBoundary>
+                }
+              />
+              
+              {/* Department Activity Routes */}
+              <Route 
+                path="deptactivity" 
+                element={
+                  <ErrorBoundary>
+                    <Suspense fallback={<PageSkeleton />}>
+                      <DeptActivity />
+                    </Suspense>
+                  </ErrorBoundary>
+                }
+              />
+            <Route 
+              path="deptactivity/:deptType" 
+              element={
+                <ErrorBoundary>
+                  <Suspense fallback={<PageSkeleton />}>
+                    <DeptActivity />
+                  </Suspense>
+                </ErrorBoundary>
+              }
+            />
+            </Route>
+          </Routes>
+        </Suspense>
+      </ErrorBoundary>
     </Router>
   )
 }

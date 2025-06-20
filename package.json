@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@tanstack/react-table": "^8.21.3",
+    "@tanstack/react-virtual": "^3.13.10",
     "ag-grid-community": "^33.3.2",
     "ag-grid-react": "^33.3.2",
     "html2canvas": "^1.4.1",

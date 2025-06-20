@@ -175,6 +175,20 @@ export default function AnnualUniquePermitsReport({ data, isLoading, selectedIte
         return isLoading || valuationData.length === 0;
     }, [isLoading, valuationData]);
 
+    const annualChartLayout = useMemo(() => ({
+        legend: {
+            orientation: 'h',
+            y: -0.2
+        }
+    }), []);
+
+    const valuationChartLayout = useMemo(() => ({
+        legend: {
+            orientation: 'h',
+            y: -0.2
+        }
+    }), []);
+
     return (
         <div className="annual-analysis-section h-full flex flex-col space-y-8">
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
@@ -203,12 +217,7 @@ export default function AnnualUniquePermitsReport({ data, isLoading, selectedIte
                     barLabelFormat={value => value.toLocaleString()}
                     dataLabelsOnLine={true}
                     dataLabelsFontSize={12}
-                    chartLayout={{
-                        legend: {
-                            orientation: 'h',
-                            y: -0.2
-                        }
-                    }}
+                    chartLayout={annualChartLayout}
                 />
             </div>
             
@@ -241,12 +250,7 @@ export default function AnnualUniquePermitsReport({ data, isLoading, selectedIte
                     disableHighlighting={true}
                     disableSelection={true}
                     tableHeaderClassName="text-center"
-                    chartLayout={{
-                        legend: {
-                            orientation: 'h',
-                            y: -0.2
-                        }
-                    }}
+                    chartLayout={valuationChartLayout}
                 />
             </div>
             

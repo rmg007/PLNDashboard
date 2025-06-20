@@ -45,9 +45,7 @@ export default function PLNCheckActivityReport({ data, isLoading }) {
         fetchWeekdayData();
     }, []);
     
-    console.log('PLNCheckActivityReport - data:', data);
-    console.log('PLNCheckActivityReport - isLoading:', isLoading);
-    console.log('PLNCheckActivityReport - weekdayData:', weekdayData);
+    // PLN Check Activity Report - Data loaded
     // Define columns for the activity table using modern @tanstack/react-table v8 syntax
     const columns = useMemo(() => [
         {
@@ -97,7 +95,7 @@ export default function PLNCheckActivityReport({ data, isLoading }) {
     // Create traces for the activity chart
     const traces = useMemo(() => {
         if (!data || !Array.isArray(data) || data.length === 0) {
-            console.log('PLNCheckActivityReport - No data available for traces');
+            // No data available for PLN Check traces
             return [];
         }
 
@@ -124,7 +122,7 @@ export default function PLNCheckActivityReport({ data, isLoading }) {
     // Create traces for the weekday chart (grouped by year)
     const weekdayTraces = useMemo(() => {
         if (!weekdayData || !Array.isArray(weekdayData) || weekdayData.length === 0) {
-            console.log('PLNCheckActivityReport - No weekday data available for traces');
+            // No weekday data available for PLN Check traces
             return [];
         }
 
@@ -158,7 +156,7 @@ export default function PLNCheckActivityReport({ data, isLoading }) {
     // Create traces for the weekday chart (grouped by day)
     const weekdayByDayTraces = useMemo(() => {
         if (!weekdayData || !Array.isArray(weekdayData) || weekdayData.length === 0) {
-            console.log('PLNCheckActivityReport - No weekday data available for day-grouped traces');
+            // No weekday data available for day-grouped PLN Check traces
             return [];
         }
 

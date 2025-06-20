@@ -24,19 +24,20 @@ export default function UniquePermits() {
     const [selectedYears, setSelectedYears] = useState([]);
     const [selectedQuarters, setSelectedQuarters] = useState([]);
     const [selectedMonths, setSelectedMonths] = useState([]);
-    const [isTabsCollapsed, setIsTabsCollapsed] = useState(true);
 
-    // Update URL when active analysis type changes
+    // Sync state with URL
     useEffect(() => {
-        navigate(`/uniquepermits/${activeAnalysisType}`, { replace: true });
-    }, [activeAnalysisType, navigate]);
-    
-    // Update active analysis type when URL changes
-    useEffect(() => {
-        if (reportType && ['annual', 'quarterly', 'monthly'].includes(reportType)) {
-            setActiveAnalysisType(reportType);
+        const validReportType = reportType && ['annual', 'quarterly', 'monthly'].includes(reportType) ? reportType : 'annual';
+        
+        if (activeAnalysisType !== validReportType) {
+            setActiveAnalysisType(validReportType);
         }
-    }, [reportType]);
+
+        // Update URL if it's not in sync with the state
+        if (location.pathname !== `/uniquepermits/${validReportType}`) {
+            navigate(`/uniquepermits/${validReportType}`, { replace: true });
+        }
+    }, [reportType, activeAnalysisType, navigate, location.pathname]);
     
     useEffect(() => {
         // Update title based on active analysis type
@@ -140,72 +141,41 @@ export default function UniquePermits() {
     const filteredMonthlyData = useMemo(() => getFilteredData(monthlyData, 'monthly'), [monthlyData, getFilteredData]);
 
     return (
-        <div className="unique-permits-dashboard" id='unique-permits-dashboard'>
-             {globalError && <div className="text-red-600 dark:text-red-400 text-center text-lg mb-4">{globalError}</div>}
+        <div className="h-full">
+            {globalError && <div className="text-red-500 text-center p-4">{globalError}</div>}
             
-            <div className="md:flex gap-4">
-                <div className={`md:flex-shrink-0 mb-4 md:mb-0 transition-all duration-300 ${isTabsCollapsed ? 'md:w-16' : 'md:w-64'}`}>
-                    <button
-                        onClick={() => setIsTabsCollapsed(!isTabsCollapsed)}
-                        className="hidden md:flex items-center justify-center w-full p-1.5 mb-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg text-gray-700 dark:text-gray-200"
-                        title={isTabsCollapsed ? 'Expand Navigation' : 'Collapse Navigation'}
-                    >
-                        {isTabsCollapsed ? <FaChevronRight className="w-5 h-5" /> : <FaChevronLeft className="w-5 h-5" />}
-                    </button>
-                    <ul className={`flex-column space-y-1 text-sm font-medium text-gray-500 dark:text-gray-400 ${isTabsCollapsed ? 'hidden md:block' : ''}`}>
-                         {[
-                            { type: 'annual', label: 'Annual Analysis', icon: FaCalendarAlt },
-                            { type: 'quarterly', label: 'Quarterly Analysis', icon: FaChartBar },
-                            { type: 'monthly', label: 'Monthly Analysis', icon: FaChartLine }
-                        ].map(({ type, label, icon: Icon }) => (
-                            <li key={type} className="relative group">
-                                <button
-                                    className={`inline-flex items-center px-3 py-2 rounded-lg w-full ${activeAnalysisType === type ? 'text-white bg-blue-700 dark:bg-blue-600' : 'hover:text-gray-900 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 dark:hover:text-white'}`}
-                                    onClick={() => {
-                                        setActiveAnalysisType(type);
-                                        navigate(`/uniquepermits/${type}`);
-                                    }}
-                                >
-                                    <Icon className={`w-4 h-4 ${isTabsCollapsed ? 'mx-auto' : 'me-2'} ${activeAnalysisType === type ? 'text-white' : 'text-gray-500 dark:text-gray-400'}`} />
-                                    {!isTabsCollapsed && label}
-                                </button>
-                                {isTabsCollapsed && (
-                                    <span className="absolute left-full ml-4 top-1/2 -translate-y-1/2 w-auto min-w-max p-2 bg-gray-800 text-white text-xs rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                                        {label}
-                                    </span>
-                                )}
-                            </li>
-                        ))}
-                        {!isTabsCollapsed && (
-                            <li className="p-3 mt-4 border-t border-gray-200 dark:border-gray-700 space-y-4">
-                                <MultiSelectDropdown
-                                    label="Select Years"
-                                    options={allYears.map(y => ({ label: String(y), value: y }))}
-                                    selectedValues={selectedYears}
-                                    onChange={handleYearChange}
-                                />
-                                {activeAnalysisType !== 'annual' && (
-                                    <MultiSelectDropdown
-                                        label="Select Quarters"
-                                        options={allQuarters.map(q => ({ label: `Q${q}`, value: q }))}
-                                        selectedValues={selectedQuarters}
-                                        onChange={handleQuarterChange}
-                                    />
-                                )}
-                                {activeAnalysisType === 'monthly' && (
-                                    <MultiSelectDropdown
-                                        label="Select Months"
-                                        options={allMonths.map(m => ({ label: m, value: m }))}
-                                        selectedValues={selectedMonths}
-                                        onChange={handleMonthChange}
-                                    />
-                                )}
-                            </li>
+            <div className="flex flex-col md:flex-row gap-4">
+                {/* Filters Panel */}
+                <div className="w-full md:w-64 flex-shrink-0">
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 space-y-4">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Filters</h3>
+                        <MultiSelectDropdown
+                            label="Select Years"
+                            options={allYears.map(y => ({ label: String(y), value: y }))}
+                            selectedValues={selectedYears}
+                            onChange={handleYearChange}
+                        />
+                        {activeAnalysisType !== 'annual' && (
+                            <MultiSelectDropdown
+                                label="Select Quarters"
+                                options={allQuarters.map(q => ({ label: `Q${q}`, value: q }))}
+                                selectedValues={selectedQuarters}
+                                onChange={handleQuarterChange}
+                            />
                         )}
-                    </ul>
+                        {activeAnalysisType === 'monthly' && (
+                            <MultiSelectDropdown
+                                label="Select Months"
+                                options={allMonths.map(m => ({ label: m, value: m }))}
+                                selectedValues={selectedMonths}
+                                onChange={handleMonthChange}
+                            />
+                        )}
+                    </div>
                 </div>
 
-                <div id='unique-permits-container' className="w-full bg-white dark:bg-gray-800">
+                {/* Main Content */}
+                <div id='unique-permits-container' className="flex-1 min-w-0">
                     {isLoadingAllData ? (
                         <div className="flex flex-col items-center justify-center h-full min-h-[600px]">
                             <RiLoader5Fill className="animate-spin text-blue-500 w-12 h-12 mb-4" />

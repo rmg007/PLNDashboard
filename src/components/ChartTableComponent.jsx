@@ -5,7 +5,6 @@ import { useReactTable, getCoreRowModel, getSortedRowModel, getPaginationRowMode
 import { useDraggableSplitter } from '../hooks/useDraggableSplitter';
 import * as XLSX from 'xlsx';
 import Plotly from 'plotly.js-dist-min';
-import { initTooltips } from '../utils/tooltipInit';
 
 import Toolbar from './ChartTableComponent/Toolbar';
 import Chart from './ChartTableComponent/Chart';
@@ -53,11 +52,6 @@ export default function ChartTableComponent(props) {
     const localContainerRef = useRef(null);
     const containerRef = externalContainerRef || localContainerRef;
     
-    // Initialize tooltips after render
-    useEffect(() => {
-        initTooltips();
-    }, []);
-
     // Splitter functionality
     const [finalInitialSplit, setFinalInitialSplit] = useState(initialSplitPos);
 
