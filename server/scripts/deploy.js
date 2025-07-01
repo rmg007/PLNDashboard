@@ -25,10 +25,24 @@ async function deploy() {
     
     // Setup database schema
     console.log('📊 Setting up database schema...');
-    const schemaPath = path.join(__dirname, '..', '..', 'database', 'schema.sql');
-    const schema = fs.readFileSync(schemaPath, 'utf8');
-    await client.query(schema);
-    console.log('✅ Database schema created');
+    try {
+      // Drop existing schema if it exists
+      await client.query(`
+        DROP SCHEMA IF EXISTS public CASCADE;
+        CREATE SCHEMA IF NOT EXISTS public;
+        GRANT ALL ON SCHEMA public TO postgres;
+        GRANT ALL ON SCHEMA public TO public;
+      `);
+      console.log('✅ Dropped and recreated schema');
+      
+      const schemaPath = path.join(__dirname, '..', '..', 'database', 'schema.sql');
+      const schema = fs.readFileSync(schemaPath, 'utf8');
+      await client.query(schema);
+      console.log('✅ Database schema created');
+    } catch (error) {
+      console.error('❌ Schema setup failed:', error);
+      throw error;
+    }
     
     // Import data
     console.log('📥 Importing data...');
@@ -39,12 +53,11 @@ async function deploy() {
     
     for (const item of yearlyData) {
       await client.query(`
-        INSERT INTO yearly_permits (fiscal_year, permit_count, total_valuation)
-        VALUES ($1, $2, $3)
+        INSERT INTO unique_permits_yearly (fiscal_year, permit_count)
+        VALUES ($1, $2)
         ON CONFLICT (fiscal_year) DO UPDATE SET
-          permit_count = EXCLUDED.permit_count,
-          total_valuation = EXCLUDED.total_valuation
-      `, [item.fiscal_year, item.permit_count, item.total_valuation]);
+          permit_count = EXCLUDED.permit_count
+      `, [item.FiscalYear, item.PermitCount]);
     }
     console.log(`✅ Imported ${yearlyData.length} yearly records`);
     
@@ -54,12 +67,11 @@ async function deploy() {
     
     for (const item of quarterlyData) {
       await client.query(`
-        INSERT INTO quarterly_permits (fiscal_year, quarter, permit_count, total_valuation)
-        VALUES ($1, $2, $3, $4)
-        ON CONFLICT (fiscal_year, quarter) DO UPDATE SET
-          permit_count = EXCLUDED.permit_count,
-          total_valuation = EXCLUDED.total_valuation
-      `, [item.fiscal_year, item.quarter, item.permit_count, item.total_valuation]);
+        INSERT INTO unique_permits_quarterly (year, quarter, permit_count)
+        VALUES ($1, $2, $3)
+        ON CONFLICT (quarter, year) DO UPDATE SET
+          permit_count = EXCLUDED.permit_count
+      `, [item.FiscalYear, item.FiscalQuarter, item.PermitCount]);
     }
     console.log(`✅ Imported ${quarterlyData.length} quarterly records`);
     
@@ -69,12 +81,11 @@ async function deploy() {
     
     for (const item of monthlyData) {
       await client.query(`
-        INSERT INTO monthly_permits (fiscal_year, month, permit_count, total_valuation)
-        VALUES ($1, $2, $3, $4)
-        ON CONFLICT (fiscal_year, month) DO UPDATE SET
-          permit_count = EXCLUDED.permit_count,
-          total_valuation = EXCLUDED.total_valuation
-      `, [item.fiscal_year, item.month, item.permit_count, item.total_valuation]);
+        INSERT INTO unique_permits_monthly (year, month, permit_count)
+        VALUES ($1, $2, $3)
+        ON CONFLICT (month, year) DO UPDATE SET
+          permit_count = EXCLUDED.permit_count
+      `, [item.FiscalYear, item.FiscalMonth, item.PermitCount]);
     }
     console.log(`✅ Imported ${monthlyData.length} monthly records`);
     
@@ -84,14 +95,11 @@ async function deploy() {
     
     for (const item of yearlyBinsData) {
       await client.query(`
-        INSERT INTO yearly_bins_permits (fiscal_year, bin_0_10k, bin_10k_100k, bin_100k_1m, bin_1m_10m)
-        VALUES ($1, $2, $3, $4, $5)
-        ON CONFLICT (fiscal_year) DO UPDATE SET
-          bin_0_10k = EXCLUDED.bin_0_10k,
-          bin_10k_100k = EXCLUDED.bin_10k_100k,
-          bin_100k_1m = EXCLUDED.bin_100k_1m,
-          bin_1m_10m = EXCLUDED.bin_1m_10m
-      `, [item.fiscal_year, item.bin_0_10k, item.bin_10k_100k, item.bin_100k_1m, item.bin_1m_10m]);
+        INSERT INTO unique_permits_yearly_bins (year, bin_range, permit_count)
+        VALUES ($1, $2, $3)
+        ON CONFLICT (bin_range, year) DO UPDATE SET
+          permit_count = EXCLUDED.permit_count
+      `, [item.year, item.permit_range, item.count]);
     }
     console.log(`✅ Imported ${yearlyBinsData.length} yearly bins records`);
     
