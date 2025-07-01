@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useId } from 'react';
 import { useLayout } from '../contexts/LayoutContext';
 import { RiLoader5Fill } from 'react-icons/ri';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -9,6 +9,13 @@ import LUActivityReport from '../components/DeptActivity/LUActivityReport';
 import PLNCheckActivityReport from '../components/DeptActivity/PLNCheckActivityReport';
 
 export default function DeptActivity() {
+    const componentId = useId();
+    const ids = {
+        mainContainer: `dept-activity-container-${componentId}`,
+        loadingIndicator: `dept-activity-loading-${componentId}`,
+        globalError: `dept-activity-error-${componentId}`,
+        mainContent: `dept-activity-content-${componentId}`,
+    };
     const { setTitle } = useLayout();
     const { deptType } = useParams();
     const navigate = useNavigate();
@@ -16,7 +23,10 @@ export default function DeptActivity() {
         isLoadingDeptData: isLoadingData, 
         filteredPSCData,
         filteredLUData,
-        filteredPLNCheckData
+        filteredPLNCheckData,
+        filteredPSCWeekdayData,
+        filteredLUWeekdayData,
+        filteredPLNCheckWeekdayData
     } = useFilter();
     
     const [globalError, setGlobalError] = useState(null);
@@ -42,27 +52,27 @@ export default function DeptActivity() {
 
     if (isLoadingData) {
         return (
-            <div className="flex justify-center items-center h-64">
+            <div id={ids.loadingIndicator} className="flex justify-center items-center h-64">
                 <RiLoader5Fill className="animate-spin text-blue-600 w-12 h-12" />
             </div>
         );
     }
 
     return (
-        <div className="h-full">
-            {globalError && <div className="text-red-500 text-center p-4">{globalError}</div>}
+        <div id={ids.mainContainer} className="h-full">
+            {globalError && <div id={ids.globalError} className="text-red-500 text-center p-4">{globalError}</div>}
 
             <div className="w-full">
                 {/* Main Content */}
-                <div className="flex-1 min-w-0">
+                <div id={ids.mainContent} className="flex-1 min-w-0">
                     {activeActivityType === 'PSC' && (
-                        <PSCActivityReport data={filteredPSCData} isLoading={isLoadingData} />
+                        <PSCActivityReport isLoading={isLoadingData} />
                     )}
                     {activeActivityType === 'LU' && (
-                        <LUActivityReport data={filteredLUData} isLoading={isLoadingData} />
+                        <LUActivityReport isLoading={isLoadingData} />
                     )}
                     {activeActivityType === 'PLN Check' && (
-                        <PLNCheckActivityReport data={filteredPLNCheckData} isLoading={isLoadingData} />
+                        <PLNCheckActivityReport isLoading={isLoadingData} />
                     )}
                 </div>
             </div>

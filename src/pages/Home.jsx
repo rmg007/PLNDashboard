@@ -26,7 +26,8 @@ export default function Home() {
     headerSection: `header-section-${componentId}`,
     lastUpdated: `last-updated-${componentId}`,
     mainContent: `main-content-${componentId}`,
-    footer: `footer-${componentId}`
+    footer: `footer-${componentId}`,
+    sidebarToggleButton: `sidebar-toggle-${componentId}`
   };
 
   useEffect(() => {
@@ -121,111 +122,111 @@ export default function Home() {
       role="main"
       id={sectionIds.mainContent}
     >
-        <div 
-          className="w-full max-w-screen-2xl mx-auto px-4 py-6 dashboard-container" 
-          id={sectionIds.dashboardContainer}
+      <div 
+        className="w-full max-w-screen-2xl mx-auto px-4 py-6 dashboard-container" 
+        id={sectionIds.dashboardContainer}
+      >
+        {/* Page Header Section */}
+        <header 
+          id={sectionIds.headerSection}
+          className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 mb-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2"
         >
-          {/* Page Header Section */}
-          <header 
-            id={sectionIds.headerSection}
-            className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 mb-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2"
-          >
-            <div className="flex items-center">
-              <button
-                onClick={toggleTabs}
-                className="mr-3 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
-                aria-label={isTabsCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-              >
-                <svg 
-                  className="w-6 h-6 text-gray-500 dark:text-gray-400" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  viewBox="0 0 24 24"
-                >
-                  {isTabsCollapsed ? (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-                  ) : (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-                  )}
-                </svg>
-              </button>
-              <div 
-                className="bg-blue-500 w-1 h-8 mr-3 rounded-full"
-                aria-hidden="true"
-              ></div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                Dashboard Overview
-              </h1>
-            </div>
-            <div 
-              id={sectionIds.lastUpdated}
-              className="flex items-center text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full"
+          <div className="flex items-center">
+            <button
+              id={sectionIds.sidebarToggleButton}
+              onClick={toggleTabs}
+              className="mr-3 p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
+              aria-label={isTabsCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
               <svg 
-                xmlns="http://www.w3.org/2000/svg" 
-                className="h-4 w-4 mr-1" 
+                className="w-6 h-6 text-gray-500 dark:text-gray-400" 
                 fill="none" 
-                viewBox="0 0 24 24" 
-                stroke="currentColor"
-                aria-hidden="true"
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
               >
-                <title>Last Updated</title>
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth={2} 
-                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" 
-                />
+                {isTabsCollapsed ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                )}
               </svg>
-              <span>{lastUpdated ? `Last updated: ${lastUpdated}` : 'Loading...'}</span>
-            </div>
-          </header>
-          
-          {/* Two-Panel Layout - With height alignment */}
-          <div 
-            className="flex flex-col lg:flex-row gap-6 lg:items-stretch"
-            role="region"
-            aria-label="Dashboard Content"
-          >
-            {/* Sidebar (25% width on large screens) */}
-            <aside 
-              className="w-full lg:w-1/4 dashboard-sidebar"
-              aria-label="Dashboard Sidebar"
-            >
-              <DashboardSidebar 
-                kpiData={dashboardData.kpiData} 
-                isCollapsed={isTabsCollapsed}
-                onToggleCollapse={toggleTabs}
-                componentId={componentId}
-              />
-            </aside>
-            
-            {/* Main Content (75% width on large screens) */}
+            </button>
             <div 
-              className="w-full lg:w-3/4"
-              role="region"
-              aria-label="Main Dashboard Content"
-            >
-              <DashboardMainContent 
-                chartData={dashboardData.chartData} 
-                isSidebarCollapsed={isTabsCollapsed}
-                componentId={componentId}
-              />
-            </div>
+              className="bg-blue-500 w-1 h-8 mr-3 rounded-full"
+              aria-hidden="true"
+            />
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              Dashboard Overview
+            </h1>
           </div>
-          
-          {/* Footer with attribution */}
-          <footer 
-            id={sectionIds.footer}
-            className="mt-12 pt-4 border-t border-gray-200 dark:border-gray-700"
-            role="contentinfo"
+          <div 
+            id={sectionIds.lastUpdated}
+            className="flex items-center text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full"
           >
-            <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
-              Planning & Development Economics Indicators Dashboard © {new Date().getFullYear()}
-            </p>
-          </footer>
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              className="h-4 w-4 mr-1" 
+              fill="none" 
+              viewBox="0 0 24 24" 
+              stroke="currentColor"
+              aria-hidden="true"
+            >
+              <title>Last Updated</title>
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth={2} 
+                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" 
+              />
+            </svg>
+            <span>{lastUpdated ? `Last updated: ${lastUpdated}` : 'Loading...'}</span>
+          </div>
+        </header>
+        
+        {/* Two-Panel Layout - With height alignment */}
+        <div 
+          className="flex flex-col lg:flex-row gap-6 lg:items-stretch"
+          role="region"
+          aria-label="Dashboard Content"
+        >
+          {/* Sidebar (25% width on large screens) */}
+          <aside 
+            className="w-full lg:w-1/4 dashboard-sidebar"
+            aria-label="Dashboard Sidebar"
+          >
+            <DashboardSidebar 
+              kpiData={dashboardData.kpiData} 
+              isCollapsed={isTabsCollapsed}
+              onToggleCollapse={toggleTabs}
+              componentId={componentId}
+            />
+          </aside>
+          
+          {/* Main Content (75% width on large screens) */}
+          <div 
+            className="w-full lg:w-3/4"
+            role="region"
+            aria-label="Main Dashboard Content"
+          >
+            <DashboardMainContent 
+              chartData={dashboardData.chartData} 
+              isSidebarCollapsed={isTabsCollapsed}
+              componentId={componentId}
+            />
+          </div>
         </div>
-      )}
+        
+        {/* Footer with attribution */}
+        <footer 
+          id={sectionIds.footer}
+          className="mt-12 pt-4 border-t border-gray-200 dark:border-gray-700"
+          role="contentinfo"
+        >
+          <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
+            Planning & Development Economics Indicators Dashboard © {new Date().getFullYear()}
+          </p>
+        </footer>
+      </div>
     </div>
   );
 }

@@ -2,12 +2,21 @@ import React from 'react';
 import { Skeleton, SkeletonCard } from './Skeleton';
 
 /**
- * A full-page loading skeleton that matches the layout of the main pages
+ * @file PageSkeleton.jsx
+ * @description A skeleton loader component that mimics the layout of a standard content page,
+ * complete with a header, sidebar, and main content area. It's used to provide a better
+ * user experience while page-specific data is being fetched.
+ */
+
+/**
+ * Renders a skeleton placeholder that represents a full page layout.
+ * This is intended to be used as a fallback for pages that have a two-column layout (sidebar + main content).
+ * @returns {React.Component} A div element representing the skeleton of a page.
  */
 const PageSkeleton = () => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
-      {/* Header Skeleton */}
+            {/* Skeleton for the Page Header */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 mb-6">
         <Skeleton className="h-8 w-64 mb-2" />
         <Skeleton className="h-4 w-48" />
@@ -15,7 +24,7 @@ const PageSkeleton = () => {
       
       {/* Main Content */}
       <div className="flex flex-col lg:flex-row gap-6">
-        {/* Sidebar Skeleton */}
+                {/* Skeleton for the Sidebar/Aside section */}
         <div className="w-full lg:w-1/4 space-y-6">
           <SkeletonCard className="p-4">
             <Skeleton className="h-6 w-3/4 mb-4" />
@@ -36,7 +45,7 @@ const PageSkeleton = () => {
           </SkeletonCard>
         </div>
         
-        {/* Main Content Skeleton */}
+                {/* Skeleton for the Main Content Area */}
         <div className="w-full lg:w-3/4 space-y-6">
           {[1, 2, 3].map((i) => (
             <SkeletonCard key={i} className="p-6">

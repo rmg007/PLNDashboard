@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useId } from 'react';
 import { useLayout } from '../contexts/LayoutContext';
 import { RiLoader5Fill } from 'react-icons/ri';
 import { FaCalendarAlt, FaChartLine, FaChartBar, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
@@ -11,6 +11,12 @@ import QuarterlyUniquePermitsReport from '../components/UniquePermitAnalysis/Qua
 import MonthlyUniquePermitsReport from '../components/UniquePermitAnalysis/MonthlyUniquePermitsReport';
 
 export default function UniquePermits() {
+  const componentId = useId();
+  const ids = {
+    mainContainer: `unique-permits-page-${componentId}`,
+    contentContainer: `unique-permits-content-${componentId}`,
+    loadingIndicator: `unique-permits-loading-${componentId}`,
+  };
   const { setTitle } = useLayout();
   const { reportType } = useParams();
   const navigate = useNavigate();
@@ -53,11 +59,11 @@ export default function UniquePermits() {
   }, [setTitle, activeAnalysisType]);
 
   return (
-    <div className="h-full">
+    <div id={ids.mainContainer} className="h-full">
       {/* Main Content */}
-      <div id='unique-permits-container' className="w-full">
+      <div id={ids.contentContainer} className="w-full">
         {isLoadingPermitData ? (
-          <div className="flex flex-col items-center justify-center h-full min-h-[600px]">
+          <div id={ids.loadingIndicator} className="flex flex-col items-center justify-center h-full min-h-[600px]">
             <RiLoader5Fill className="animate-spin text-blue-500 w-12 h-12 mb-4" />
             <p className="text-lg text-gray-700 dark:text-gray-300">Loading data...</p>
           </div>

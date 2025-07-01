@@ -1,7 +1,7 @@
 import React from 'react';
 import { useLocation } from 'react-router-dom';
 import { useFilter } from '../../contexts/FilterContext';
-import MultiSelectDropdown from '../Common/MultiSelectDropdown';
+import MultiSelectDropdown from '../common/MultiSelectDropdown';
 
 export default function FilterPanel() {
   const location = useLocation();
@@ -51,6 +51,7 @@ export default function FilterPanel() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Year</label>
                 <MultiSelectDropdown 
+                  id="dept-activity-year-filter"
                   options={allYears.map(year => ({ value: year, label: year.toString() }))}
                   selectedValues={selectedYears}
                   onChange={handleYearChange}
@@ -72,6 +73,7 @@ export default function FilterPanel() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fiscal Year</label>
                 <MultiSelectDropdown 
+                  id="unique-permits-year-filter"
                   options={permitYears.map(year => ({ value: year, label: year.toString() }))}
                   selectedValues={selectedPermitYears}
                   onChange={handlePermitYearChange}
@@ -81,6 +83,7 @@ export default function FilterPanel() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Quarter</label>
                 <MultiSelectDropdown 
+                  id="unique-permits-quarter-filter"
                   options={allQuarters.map(quarter => ({ value: quarter, label: `Q${quarter}` }))}
                   selectedValues={selectedQuarters}
                   onChange={handleQuarterChange}
@@ -90,6 +93,7 @@ export default function FilterPanel() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Month</label>
                 <MultiSelectDropdown 
+                  id="unique-permits-month-filter"
                   options={allMonths.map(month => ({ value: month, label: month }))}
                   selectedValues={selectedMonths}
                   onChange={handleMonthChange}

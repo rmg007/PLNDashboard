@@ -1,15 +1,18 @@
 import React, { useMemo, useEffect, useState } from 'react';
 import { useLayout } from '../../contexts/LayoutContext';
+import { useFilter } from '../../contexts/FilterContext';
 import { updateTitle } from '../../utils/titleManager';
 import ChartTableComponent from '../../components/ChartTableComponent';
+import BarChartTableComponent from '../../components/charts/BarChartTableComponent';
+import GroupedBarChartTableComponent from '../../components/charts/GroupedBarChartTableComponent';
+import MoreMenu from '../../components/ChartTableComponent/MoreMenu';
 import { createColumnHelper } from '@tanstack/react-table';
 
 const columnHelper = createColumnHelper();
 
-export default function PLNCheckActivityReport({ data, isLoading }) {
-    const { setTitle } = useLayout();
-    const [weekdayData, setWeekdayData] = useState([]);
-    const [isLoadingWeekdayData, setIsLoadingWeekdayData] = useState(true);
+export default function PLNCheckActivityReport({ isLoading }) {
+        const { setTitle } = useLayout();
+    const { filteredPLNCheckData: data, filteredPLNCheckWeekdayData: weekdayData } = useFilter();
     const plnCheckPalette = [
         'rgb(168, 65, 27)', 'rgb(167, 103, 26)', 'rgb(175, 153, 28)',
         'rgb(93, 173, 12)', 'rgb(42, 170, 106)', 'rgb(0, 110, 146)',
@@ -23,27 +26,7 @@ export default function PLNCheckActivityReport({ data, isLoading }) {
         return () => setTitle('My Dashboard');
     }, [setTitle]);
     
-    // Fetch weekday data
-    useEffect(() => {
-        const fetchWeekdayData = async () => {
-            try {
-                const response = await fetch('./data/UniquePermitsAnalysisData/DeptAnnualActivityWeekdayJson.json');
-                if (!response.ok) {
-                    throw new Error('Failed to fetch weekday data');
-                }
-                const allData = await response.json();
-                // Filter for PLN Check department only
-                const plnCheckData = allData.filter(item => item.department === 'PLN Check');
-                setWeekdayData(plnCheckData);
-            } catch (error) {
-                console.error('Error fetching weekday data:', error);
-            } finally {
-                setIsLoadingWeekdayData(false);
-            }
-        };
-        
-        fetchWeekdayData();
-    }, []);
+    // No need for CSS injection anymore as we're using the verticalLayout prop
     
     // PLN Check Activity Report - Data loaded
     // Define columns for the activity table using modern @tanstack/react-table v8 syntax
@@ -92,32 +75,27 @@ export default function PLNCheckActivityReport({ data, isLoading }) {
         })
     ], []);
 
-    // Create traces for the activity chart
-    const traces = useMemo(() => {
-        if (!data || !Array.isArray(data) || data.length === 0) {
-            // No data available for PLN Check traces
-            return [];
-        }
-
-        // Sort data by year
-        const sortedData = [...data].sort((a, b) => a.year - b.year);
-        
-        return [{
-            x: sortedData.map(item => item.year),
-            y: sortedData.map(item => item.activity_count),
-            type: 'bar',
-            name: 'PLN Check Activity',
-            marker: { color: plnCheckPalette[0] }, // Use first color of Forest Green Theme
-            text: sortedData.map(item => item.activity_count.toLocaleString()),
-            textposition: 'inside',
-            insidetextanchor: 'middle',
+    // Data is now directly used by BarChartTableComponent with xField and yField
+    
+    // Define common chart configuration
+    const commonChartConfig = useMemo(() => ({
+        legend: {
+            orientation: 'h',
+            yanchor: 'top',
+            y: -0.2,
+            xanchor: 'center',
+            x: 0.5
+        },
+        // Add data labels outside bars with -45° rotation
+        traces: yFields => yFields.map((field, index) => ({
+            textposition: 'outside',
+            textangle: -45,
             textfont: {
-                color: 'white',
-                size: 12
+                size: 10
             },
-            hovertemplate: '<b>Year: %{x}</b><br>Activity Count: %{y:,}<extra></extra>'
-        }];
-    }, [data, plnCheckPalette]);
+            texttemplate: '%{y:.1%}'
+        }))
+    }), []);
     
     // Create traces for the weekday chart (grouped by year)
     const weekdayTraces = useMemo(() => {
@@ -223,119 +201,134 @@ export default function PLNCheckActivityReport({ data, isLoading }) {
     ], []);
 
     return (
-        <div className="pln-check-activity-report space-y-8">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-                <ChartTableComponent 
+        <div id="pln-check-activity-report" className="pln-check-activity-report space-y-8">
+             <div id="pln-check-activity-chart-container" className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-4 relative">
+                           <MoreMenu 
+                               id="more-menu-pln-check-activity"
+                               chartType="bar"
+                               setChartType={() => {}}
+                               onExportCsv={() => {}}
+                               onExportPng={() => {}}
+                               showChartTypeSwitcher={true}
+                               tableVisible={true}
+                               onToggleTable={() => {}}
+                               showTableToggle={true}
+                           />
+                <BarChartTableComponent
                     id='chartPLNCheckActivity'
-                    initialTableWidth={250}
                     data={Array.isArray(data) ? data : []}
+                    xField="year"
+                    yField="activity_count"
+                    title="PLN Check Activity by Year"
+                    xAxisLabel="Year"
+                    yAxisLabel="Activity Count"
+                    color={plnCheckPalette[0]}
+                    showLabels={true}
+                    labelFormat={(value) => value.toLocaleString()}
                     columns={columns}
-                    isLoading={isLoading}
-                    chartTitle="PLN Check Department Activity by Year"
-                    xAxisTitle="Year"
-                    yAxisTitle="Activity Count"
-                    traces={traces}
-                    showTrendLine={true}
-                    showAverageLine={true}
-                    showBarLabels={true}
-                    barLabelPosition="inside"
-                    barLabelInsideAnchor="middle"
-                    barLabelFontColor="white"
-                    excelFileName="PLNCheckActivityReport.xlsx"
-                    chartFileName="PLNCheckActivityReport.png"
-                    excelSheetName="PLN Check Activity"
-                    showTablePanel={true}
-                    initialSplitPos={70}
-                    showPagination={false}
-                    showChartTypeSwitcher={true}
-                    chartType="bar"
-                    showLineLabels={true}
-                    chartLayout={{
-                        legend: {
-                            orientation: 'h',
-                            y: -0.2
+                    defaultRowsPerPage={10}
+                    defaultSorting={[{ id: 'year', desc: true }]}
+                    chartConfig={commonChartConfig}
+                    initialState={{
+                        columnSizing: {
+                            year: 60,
+                            activity_count: 100
                         }
                     }}
                 />
             </div>
             
             {/* Weekday Activity Chart - Grouped by Year */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-                <ChartTableComponent 
+            <div id="pln-check-weekday-activity-chart-container" className="bg-gray-50 dark:bg-gray-800/50 rounded-lg shadow-lg p-4 border border-gray-200 dark:border-gray-700 relative">
+                <MoreMenu 
+                    id="more-menu-pln-check-weekday-activity"
+                    chartType="bar"
+                    setChartType={() => {}}
+                    onExportCsv={() => {}}
+                    onExportPng={() => {}}
+                    showChartTypeSwitcher={false}
+                    tableVisible={true}
+                    onToggleTable={() => {}}
+                    showTableToggle={true}
+                />
+                <GroupedBarChartTableComponent 
                     id='chartPLNCheckWeekdayActivity'
                     data={Array.isArray(weekdayData) ? weekdayData : []}
                     columns={weekdayColumns}
-                    isLoading={isLoadingWeekdayData}
-                    chartTitle="PLN Check Data - Per Action (Weekdays) - Grouped by Year"
-                    xAxisTitle="Year"
-                    yAxisTitle="Percentage"
-                    traces={weekdayTraces}
-                    showTrendLine={false}
-                    showAverageLine={false}
-                    showBarLabels={true}
-                    barLabelPosition="inside"
+                    xField="year"
+                    yFields={['monday', 'tuesday', 'wednesday', 'thursday', 'friday']}
+                    yLabels={['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']}
+                    title="PLN Check Data - Per Action (Weekdays) - Grouped by Year"
+                    xAxisLabel="Year"
+                    yAxisLabel="Percentage"
+                    colors={plnCheckPalette}
                     barMode="group"
-                    excelFileName="PLNCheckWeekdayActivityReport.xlsx"
-                    chartFileName="PLNCheckWeekdayActivityReport.png"
-                    excelSheetName="PLN Check Weekday Activity"
-                    showTablePanel={true}
-                    splitterOrientation="horizontal"
-                    initialSplitPos={60}
-                    showPagination={false}
-                    showChartTypeSwitcher={false}
-                    disableHighlighting={true}
-                    disableSelection={true}
-                    chartType="bar"
-                    chartLayout={{
-                        barmode: 'group',
+                    height={400}
+                    tablePosition="bottom"
+                    showTable={true}
+                    enableSelection={false}
+                    chartConfig={{
                         yaxis: {
                             tickformat: '.0%',
-                            range: [0, 0.3], // Set y-axis range from 0% to 30%
+                            range: [0, 0.3] // Set y-axis range from 0% to 30%
                         },
                         legend: {
                             orientation: 'h',
-                            y: -0.2
+                            y: -0.2,
+                            yanchor: 'top',
+                            xanchor: 'center',
+                            x: 0.5
                         }
                     }}
                 />
             </div>
             
             {/* Weekday Activity Chart - Grouped by Day */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-                <ChartTableComponent 
+            <div id="pln-check-weekday-by-day-activity-chart-container" className="bg-gray-50 dark:bg-gray-800/50 rounded-lg shadow-lg p-4 border border-gray-200 dark:border-gray-700 relative">
+                <MoreMenu 
+                    id="more-menu-pln-check-weekday-by-day-activity"
+                    chartType="bar"
+                    setChartType={() => {}}
+                    onExportCsv={() => {}}
+                    onExportPng={() => {}}
+                    showChartTypeSwitcher={false}
+                    tableVisible={true}
+                    onToggleTable={() => {}}
+                    showTableToggle={true}
+                />
+                <GroupedBarChartTableComponent 
                     id='chartPLNCheckWeekdayByDayActivity'
                     data={Array.isArray(weekdayData) ? weekdayData : []}
                     columns={weekdayByDayColumns}
-                    isLoading={isLoadingWeekdayData}
-                    chartTitle="PLN Check Data - Per Action (Weekdays) - Grouped by Day"
-                    xAxisTitle="Weekday"
-                    yAxisTitle="Percentage"
-                    traces={weekdayByDayTraces}
-                    showTrendLine={false}
-                    showAverageLine={false}
-                    showBarLabels={true}
-                    barLabelPosition="inside"
+                    xField="year"
+                    yFields={['monday', 'tuesday', 'wednesday', 'thursday', 'friday']}
+                    yLabels={['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']}
+                    title="PLN Check Activity by Weekday"
+                    xAxisLabel="Weekday"
+                    yAxisLabel="Percentage"
+                    colors={plnCheckPalette}
                     barMode="group"
-                    excelFileName="PLNCheckWeekdayByDayActivityReport.xlsx"
-                    chartFileName="PLNCheckWeekdayByDayActivityReport.png"
-                    excelSheetName="PLN Check Weekday By Day Activity"
-                    showTablePanel={true}
-                    splitterOrientation="horizontal"
-                    initialSplitPos={60}
-                    showPagination={false}
-                    showChartTypeSwitcher={false}
-                    disableHighlighting={true}
-                    disableSelection={true}
-                    chartType="bar"
-                    chartLayout={{
-                        barmode: 'group',
+                    defaultRowsPerPage={10}
+                    defaultSorting={[{ id: 'year', desc: true }]}
+                    chartConfig={{
                         yaxis: {
                             tickformat: '.0%',
-                            range: [0, 0.3], // Set y-axis range from 0% to 30%
+                            range: [0, 0.3] // Set y-axis range from 0% to 30%
                         },
                         legend: {
                             orientation: 'h',
-                            y: -0.2
+                            y: -0.2,
+                            yanchor: 'top'
+                        }
+                    }}
+                    initialState={{
+                        columnSizing: {
+                            year: 60,
+                            monday: 80,
+                            tuesday: 80,
+                            wednesday: 80,
+                            thursday: 80,
+                            friday: 80
                         }
                     }}
                 />

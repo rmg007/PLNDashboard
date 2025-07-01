@@ -1,44 +1,19 @@
+import { permitAPI, departmentAPI } from './api';
+
 /**
  * Dashboard Data Service
  * Provides methods to fetch and prepare data for the dashboard components
- * Data is loaded from JSON files in public/data/UniquePermitsAnalysisData
+ * Data is loaded from the API endpoints
  */
 
 /**
- * Fetch data from a JSON file
- * @param {string} fileName - Name of the JSON file to fetch
- * @returns {Promise<Array>} Data from the JSON file
- */
-const fetchJsonData = async (fileName) => {
-  const url = `/data/UniquePermitsAnalysisData/${fileName}`;
-  console.log(`Fetching data from: ${url}`);
-  
-  try {
-    const response = await fetch(url);
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Error response for ${fileName}: ${response.status} ${response.statusText}`, errorText);
-      throw new Error(`Failed to fetch ${fileName}: ${response.status} ${response.statusText}`);
-    }
-    
-    const data = await response.json();
-    console.log(`Successfully loaded ${fileName}:`, Array.isArray(data) ? `${data.length} items` : 'Object data');
-    return data;
-  } catch (error) {
-    console.error(`Error fetching ${fileName}:`, error);
-    // Return empty array for array-expected data, empty object for object-expected data
-    return [];
-  }
-};
-
-/**
- * Transform department workload data from JSON to heatmap format
+ * Transform department workload data from API to heatmap format
  * @returns {Promise<Array>} Department workload data for heatmap
  */
 const getDepartmentWorkloadData = async () => {
   try {
-    // Fetch data from DeptAnnualActivityWeekdayJson.json
-    const rawData = await fetchJsonData('DeptAnnualActivityWeekdayJson.json');
+    // Fetch data from API
+    const rawData = await departmentAPI.getActivityWeekday();
     
     if (!rawData || rawData.length === 0) {
       throw new Error('No department workload data available');
@@ -76,7 +51,7 @@ const getDepartmentWorkloadData = async () => {
 const getPermitDistributionData = async () => {
   try {
     // Use the yearly bins data to create permit categories
-    const rawData = await fetchJsonData('UniquePermitYearlyBinsJson.json');
+    const rawData = await permitAPI.getYearlyBins();
     
     if (!rawData || rawData.length === 0) {
       throw new Error('No permit distribution data available');
@@ -90,10 +65,10 @@ const getPermitDistributionData = async () => {
     // Create categories based on permit ranges
     const categories = {};
     latestYearData.forEach(item => {
-      if (!categories[item.permit_range]) {
-        categories[item.permit_range] = 0;
+      if (!categories[item.bin_range]) {
+        categories[item.bin_range] = 0;
       }
-      categories[item.permit_range] += item.count;
+      categories[item.bin_range] += item.permit_count;
     });
     
     // Convert to array format for horizontal bar chart
@@ -147,18 +122,20 @@ export const fetchKPIData = async () => {
       }
     };
     
-    // Fetch data from JSON files
-    const yearlyData = await fetchJsonData('UniquePermitYearlyJson.json');
-    const deptActivityData = await fetchJsonData('DeptAnnualActivityJson.json');
-    const monthlyData = await fetchJsonData('UniquePermitMonthlyJson.json');
+    // Fetch data from API
+    const [yearlyData, deptActivityData, monthlyData] = await Promise.all([
+      permitAPI.getYearlyPermits(),
+      departmentAPI.getActivity(),
+      permitAPI.getMonthlyPermits()
+    ]);
     
     if (!yearlyData.length || !deptActivityData.length || !monthlyData.length) {
-      console.warn('Missing data in JSON files, using default KPI data');
+      console.warn('Missing data from API, using default KPI data');
       return defaultKpiData;
     }
     
     // Sort data by year to get trends
-    const sortedYearlyData = [...yearlyData].sort((a, b) => a.FiscalYear - b.FiscalYear);
+    const sortedYearlyData = [...yearlyData].sort((a, b) => a.fiscal_year - b.fiscal_year);
     const recentYears = sortedYearlyData.slice(-5); // Get last 5 years
     
     // Check if we have enough data for trends
@@ -169,8 +146,8 @@ export const fetchKPIData = async () => {
     // Calculate total permits trend
     const currentYear = recentYears[recentYears.length - 1];
     const previousYear = recentYears[recentYears.length - 2];
-    const totalPermitsTrend = previousYear.PermitCount !== 0 ? 
-      ((currentYear.PermitCount - previousYear.PermitCount) / previousYear.PermitCount) * 100 : 0;
+    const totalPermitsTrend = previousYear.permit_count !== 0 ? 
+      ((currentYear.permit_count - previousYear.permit_count) / previousYear.permit_count) * 100 : 0;
     const totalPermitsTrendValue = `${totalPermitsTrend >= 0 ? '+' : ''}${totalPermitsTrend.toFixed(1)}%`;
     
     // Get department activity data for the most recent year
@@ -189,138 +166,42 @@ export const fetchKPIData = async () => {
     
     // Get monthly trend for current year
     const latestMonthlyData = monthlyData
-      .filter(item => item.FiscalYear === currentYear.FiscalYear)
+      .filter(item => item.year === currentYear.fiscal_year)
       .sort((a, b) => {
         const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        return months.indexOf(a.FiscalMonth) - months.indexOf(b.FiscalMonth);
+        return months.indexOf(a.month) - months.indexOf(b.month);
       });
     
     const recentMonths = latestMonthlyData.slice(-6); // Last 6 months
     
-    // Check if we have enough monthly data
-    if (recentMonths.length < 2) {
-      console.warn('Not enough monthly data for trend calculation, using default values');
-    }
-    
-    const monthlyTrendValue = (recentMonths.length >= 2 && recentMonths[0].PermitCount !== 0) ?
-      ((recentMonths[recentMonths.length - 1].PermitCount - recentMonths[0].PermitCount) / recentMonths[0].PermitCount) * 100 : 5.2; // Default value if calculation not possible
-    
-    // Calculate average valuation (using yearly bins data as a proxy)
-    const valuationData = await fetchJsonData('UniquePermitYearlyBinsJson.json');
-    const latestValuationYear = Math.max(...valuationData.map(item => item.year));
-    const latestValuationData = valuationData.filter(item => item.year === latestValuationYear);
-    
-    // Estimate average valuation using ranges as midpoints
-    const valuationRanges = {
-      '0-10K': 5000,
-      '10K-100K': 55000,
-      '100K-1M': 550000,
-      '1M-10M': 5500000,
-      '10M+': 15000000
-    };
-    
-    let totalValue = 0;
-    let totalCount = 0;
-    
-    latestValuationData.forEach(item => {
-      const midpoint = valuationRanges[item.permit_range] || 0;
-      totalValue += midpoint * item.count;
-      totalCount += item.count;
-    });
-    
-    const currentYearAvgValuation = totalCount > 0 ? Math.round(totalValue / totalCount) : 0;
-    const avgValuationTrend = 12.5; // Placeholder - would need historical data to calculate accurately
-    const avgValuationTrendValue = `+${avgValuationTrend.toFixed(1)}%`;
-    
-    // Create sparkline data from historical values
-    const yearlySparkline = recentYears.map(year => year.PermitCount);
-    
-    // For valuation, we'll estimate based on yearly data
-    const valuationSparkline = [currentYearAvgValuation * 0.8, currentYearAvgValuation * 0.85, currentYearAvgValuation * 0.9, currentYearAvgValuation * 0.95, currentYearAvgValuation];
-    
-    // Department activity sparkline
-    const deptActivitySparkline = [currentYearDeptActivity * 0.8, currentYearDeptActivity * 0.85, currentYearDeptActivity * 0.9, currentYearDeptActivity * 0.95, currentYearDeptActivity];
-    
-    // Monthly trend sparkline
-    const monthlySparkline = recentMonths.map(month => month.PermitCount);
-    const monthlyTrendDirection = monthlyTrendValue >= 0 ? 'up' : 'down';
-    const monthlyTrendPercentage = `${monthlyTrendValue >= 0 ? '+' : ''}${monthlyTrendValue.toFixed(1)}%`;
-    
-    // Add metrics data for the DataMetricsCard component
-    const metrics = {
-      avgProcessingDays: 21,
-      completionRate: 87,
-      approvalRate: 92,
-      revisionRate: 15
-    };
-
+    // Return updated KPI data
     return {
       totalPermits: {
-        value: currentYear.PermitCount,
+        value: currentYear.permit_count,
         trend: totalPermitsTrend >= 0 ? 'up' : 'down',
         trendValue: totalPermitsTrendValue,
-        sparklineData: yearlySparkline
+        sparklineData: recentYears.map(y => y.permit_count)
       },
-      avgValuation: {
-        value: Math.round(currentYearAvgValuation),
-        trend: avgValuationTrend >= 0 ? 'up' : 'down',
-        trendValue: avgValuationTrendValue,
-        sparklineData: valuationSparkline
-      },
+      avgValuation: defaultKpiData.avgValuation, // Keep default for now
       deptActivity: {
         value: currentYearDeptActivity,
         trend: deptActivityTrend >= 0 ? 'up' : 'down',
         trendValue: deptActivityTrendValue,
-        sparklineData: deptActivitySparkline
+        sparklineData: deptActivityData
+          .filter(d => d.year >= latestActivityYear - 4)
+          .map(d => d.activity_count)
       },
       monthlyTrend: {
-        value: monthlyTrendValue >= 0 ? 'Increasing' : 'Decreasing',
-        trend: monthlyTrendValue >= 0 ? 'up' : 'down',
-        trendValue: `${monthlyTrendValue >= 0 ? '+' : ''}${monthlyTrendValue.toFixed(1)}%`,
-        sparklineData: monthlySparkline
+        value: totalPermitsTrend >= 0 ? 'Increasing' : 'Decreasing',
+        trend: totalPermitsTrend >= 0 ? 'up' : 'down',
+        trendValue: totalPermitsTrendValue,
+        sparklineData: recentMonths.map(m => m.permit_count)
       },
-      metrics: {
-        avgProcessingDays: 21,
-        completionRate: 87,
-        approvalRate: 92,
-        revisionRate: 15
-      }
+      metrics: defaultKpiData.metrics // Keep default for now
     };
   } catch (error) {
     console.error('Error fetching KPI data:', error);
-    // Return default data instead of empty object
-    return {
-      totalPermits: {
-        value: 1250,
-        trend: 'up',
-        trendValue: '+8.5%',
-        sparklineData: [980, 1050, 1100, 1150, 1250]
-      },
-      avgValuation: {
-        value: 425000,
-        trend: 'up',
-        trendValue: '+12.5%',
-        sparklineData: [340000, 360000, 385000, 400000, 425000]
-      },
-      deptActivity: {
-        value: 3850,
-        trend: 'up',
-        trendValue: '+5.2%',
-        sparklineData: [3500, 3600, 3700, 3800, 3850]
-      },
-      monthlyTrend: {
-        value: 'Increasing',
-        trend: 'up',
-        trendValue: '+6.8%',
-        sparklineData: [210, 225, 230, 235, 240, 255]
-      },
-      metrics: {
-        avgProcessingDays: 21,
-        completionRate: 87,
-        approvalRate: 92,
-        revisionRate: 15
-      }
-    };
+    return defaultKpiData;
   }
 };
 
@@ -330,61 +211,34 @@ export const fetchKPIData = async () => {
  */
 export const fetchChartData = async () => {
   try {
-    // Fetch data from JSON files
-    const yearlyData = await fetchJsonData('UniquePermitYearlyJson.json');
-    const yearlyBinsData = await fetchJsonData('UniquePermitYearlyBinsJson.json');
-    const deptActivityData = await fetchJsonData('DeptAnnualActivityJson.json');
-    
+    const [yearlyData, yearlyBinsData, deptActivityData] = await Promise.all([
+      permitAPI.getYearlyPermits(),
+      permitAPI.getYearlyBins(),
+      departmentAPI.getActivity()
+    ]);
+
     if (!yearlyData.length || !yearlyBinsData.length || !deptActivityData.length) {
-      throw new Error('Failed to fetch chart data from JSON files');
+      throw new Error('Failed to fetch chart data from API');
     }
-    
-    // Process data for charts
-    const permitVolumeData = await processPermitVolumeData(yearlyData, yearlyBinsData);
-    const valuationRangeData = await processValuationRangeData(yearlyBinsData);
-    
-    // Get department workload data for heatmap
-    const departmentWorkloadData = await getDepartmentWorkloadData();
-    
-    // Process data for Horizontal Bar Chart - Permit Distribution
-    const permitDistributionData = await getPermitDistributionData();
-    
-    // Transform department activity data for trends chart
-    const departmentActivity = deptActivityData.map(item => ({
-      department: item.department,
-      year: item.year.toString(),
-      value: item.activity_count
-    }));
-    
-    // Default data for permit distribution if API fails
-    const defaultPermitData = [
-      { category: 'Residential', value: 45 },
-      { category: 'Commercial', value: 30 },
-      { category: 'Industrial', value: 15 },
-      { category: 'Other', value: 10 }
-    ];
-    
+
+    const [permitVolumeData, valuationRangeData] = await Promise.all([
+      processPermitVolumeData(yearlyData, yearlyBinsData),
+      processValuationRangeData(yearlyBinsData)
+    ]);
+
+    const deptTrendsData = await processDeptActivityData(deptActivityData);
+
     return {
       permitVolumeData,
       valuationRangeData,
-      departmentWorkload: departmentWorkloadData,
-      departmentActivity,
-      permitDistributionData: permitDistributionData.length ? permitDistributionData : defaultPermitData
+      deptTrendsData
     };
   } catch (error) {
     console.error('Error fetching chart data:', error);
-    // Return default data instead of empty object
     return {
       permitVolumeData: [],
       valuationRangeData: [],
-      departmentWorkload: [],
-      departmentActivity: [],
-      permitDistributionData: [
-        { category: 'Residential', value: 45 },
-        { category: 'Commercial', value: 30 },
-        { category: 'Industrial', value: 15 },
-        { category: 'Other', value: 10 }
-      ]
+      deptTrendsData: []
     };
   }
 };
@@ -402,7 +256,7 @@ async function processPermitVolumeData(yearlyData, yearlyBinsData) {
     }
     
     // Sort data by year
-    const sortedYearlyData = [...yearlyData].sort((a, b) => a.FiscalYear - b.FiscalYear);
+    const sortedYearlyData = [...yearlyData].sort((a, b) => a.fiscal_year - b.fiscal_year);
     const recentYears = sortedYearlyData.slice(-5); // Get last 5 years
     
     // Calculate average valuation for each year
@@ -422,21 +276,21 @@ async function processPermitVolumeData(yearlyData, yearlyBinsData) {
         yearlyValuations[year] = { totalValue: 0, totalCount: 0 };
       }
       
-      const midpoint = valuationRanges[item.permit_range] || 0;
-      yearlyValuations[year].totalValue += midpoint * item.count;
-      yearlyValuations[year].totalCount += item.count;
+      const midpoint = valuationRanges[item.bin_range] || 0;
+      yearlyValuations[year].totalValue += midpoint * item.permit_count;
+      yearlyValuations[year].totalCount += item.permit_count;
     });
     
     // Create the combined data
     return recentYears.map(yearData => {
-      const year = yearData.FiscalYear;
+      const year = yearData.fiscal_year;
       const valuation = yearlyValuations[year] || { totalValue: 0, totalCount: 0 };
       const avgValuation = valuation.totalCount > 0 ? 
         Math.round(valuation.totalValue / valuation.totalCount) : 0;
       
       return {
         year: year.toString(),
-        permitCount: yearData.PermitCount,
+        permitCount: yearData.permit_count,
         avgValuation: avgValuation
       };
     });
@@ -512,7 +366,7 @@ async function processValuationRangeData(yearlyBinsData) {
       // Add each range as a property
       yearData.forEach(item => {
         // Convert range names to match expected format
-        let rangeName = item.permit_range;
+        let rangeName = item.bin_range;
         if (rangeName === '0-10K') rangeName = '<$100K';
         else if (rangeName === '10K-100K') rangeName = '<$100K'; // Combine with the first category
         else if (rangeName === '100K-1M') rangeName = '$100K-$1M';
@@ -521,9 +375,9 @@ async function processValuationRangeData(yearlyBinsData) {
         
         // Add or update the range count
         if (!yearObj[rangeName]) {
-          yearObj[rangeName] = item.count;
+          yearObj[rangeName] = item.permit_count;
         } else {
-          yearObj[rangeName] += item.count;
+          yearObj[rangeName] += item.permit_count;
         }
       });
       

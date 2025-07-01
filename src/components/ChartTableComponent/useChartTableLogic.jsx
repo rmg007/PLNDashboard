@@ -1,7 +1,7 @@
 // src/hooks/useChartTableLogic.jsx
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { useDraggableSplitter } from './useDraggableSplitter.js';
+
 import Plotly from 'plotly.js-dist-min';
 import {
     useReactTable,
@@ -28,12 +28,6 @@ export function useChartTableLogic({
     const [sorting, setSorting] = useState([]);
     const chartRef = useRef(null);
     const containerRef = useRef(null);
-
-    const { splitPos, isDragging, handleMouseDown } = useDraggableSplitter(
-        containerRef,
-        initialSplitPos,
-        splitterOrientation,
-    );
 
     const table = useReactTable({
         data: data || [],
@@ -101,6 +95,6 @@ export function useChartTableLogic({
     return {
         chartType, setChartType, table, chartTraces, chartRef,
         handleExportCsv, handleExportPng, refreshChart,
-        containerRef, splitPos, isDragging, handleMouseDown,
+        containerRef,
     };
 }

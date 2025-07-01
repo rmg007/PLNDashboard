@@ -1,6 +1,7 @@
-import React, { useMemo } from 'react';
-import ChartTableComponent from '../ChartTableComponent';
+import React, { useMemo, useRef } from 'react';
+import BarChartTableComponent from '../charts/BarChartTableComponent';
 import { createColumnHelper } from '@tanstack/react-table';
+import DashboardCardComponent from '../common/DashboardCardComponent';
 
 const columnHelper = createColumnHelper();
 
@@ -60,6 +61,9 @@ export default function BinCharts({ valuationTableData, filteredValuationData, c
     return (
         <>
             {[...binChartsData].reverse().map((bin, index) => {
+                // Create a slug from the permit range for use in IDs
+                const slug = bin.permitRange.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+
                 // Create bin-specific chart title
                 const binChartTitle = `Permit Volume for Valuation Range: ${bin.permitRange}`;
                 
@@ -67,41 +71,62 @@ export default function BinCharts({ valuationTableData, filteredValuationData, c
                 const binColor = pastelPalette[index % pastelPalette.length];
                 
                 return (
-                    <div key={`bin-chart-${index}`} className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mt-8">
-                        <ChartTableComponent 
-                            id={`chartValuationBin-${bin.permitRange}`}
+                    <DashboardCardComponent
+                        key={`bin-chart-${index}`}
+                        id={`bin-chart-container-${slug}`}
+                        title={binChartTitle}
+                        isLoading={isValuationLoading}
+                        exportOptions={{
+                            excel: `ValuationBin-${bin.permitRange}.xlsx`,
+                            image: `ValuationBin-${bin.permitRange}.png`
+                        }}
+                        className="mt-8"
+                    >
+                        <BarChartTableComponent
+                            id={`chart-valuation-bin-${slug}`}
                             data={bin.chartData}
                             columns={binColumns}
                             isLoading={isValuationLoading}
                             chartTitle={binChartTitle}
-                            xAxisTitle="Fiscal Year"
-                            yAxisTitle="Permit Count"
-                            xAccessor="FiscalYear"
-                            yAccessor="PermitCount"
-                            chartType="bar"
-                            baseBarColor={binColor}
-                            showTrendLine={true}
-                            excelFileName={`ValuationBin-${bin.permitRange}.xlsx`}
-                            chartFileName={`ValuationBin-${bin.permitRange}.png`}
-                            initialTableWidth={320}
-                            showTablePanel={true}
-                            tableHeaderClassName="text-center"
-                            showBarLabels={true}
-                            barLabelPosition="inside"
-                            barLabelInsideAnchor="middle"
-                            barLabelFontSize={12}
-                            barLabelFontColor="white"
-                            barLabelFormat={value => value.toLocaleString()}
-                            dataLabelsOnLine={true}
-                            dataLabelsFontSize={12}
-                            chartLayout={{
+                            xField="FiscalYear"
+                            yField="PermitCount"
+                            defaultSorting={[
+                                { id: 'FiscalYear', desc: true }
+                            ]}
+                            chartConfig={{
+                                yaxis: {
+                                    title: "Count"
+                                },
+                                showlegend: false,
+                                colorway: [binColor],
                                 legend: {
                                     orientation: 'h',
-                                    y: -0.2
+                                    yanchor: 'top',
+                                    y: -0.2,
+                                    xanchor: 'center',
+                                    x: 0.5
+                                },
+                                traces: [{
+                                    texttemplate: '%{y}',
+                                    textposition: 'inside',
+                                    insidetextanchor: 'middle',
+                                    textfont: {
+                                        color: 'white',
+                                        size: 12
+                                    }
+                                }]
+                            }}
+                            initialState={{
+                                pagination: {
+                                    pageSize: 10
+                                },
+                                columnSizing: {
+                                    FiscalYear: 100,
+                                    PermitCount: 120
                                 }
                             }}
                         />
-                    </div>
+                    </DashboardCardComponent>
                 );
             })}
         </>

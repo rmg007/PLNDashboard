@@ -6,16 +6,22 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "server": "cd server && node index.js",
+    "db:setup": "cd server && node scripts/setup-database.js",
+    "db:import": "cd server && node scripts/import-data.js",
+    "deploy": "cd server && node scripts/deploy.js"
   },
   "dependencies": {
     "@tanstack/react-table": "^8.21.3",
     "@tanstack/react-virtual": "^3.13.10",
     "ag-grid-community": "^33.3.2",
     "ag-grid-react": "^33.3.2",
+    "dotenv": "^17.0.0",
     "html2canvas": "^1.4.1",
     "jsdom": "^26.1.0",
     "jspdf": "^3.0.1",
+    "pg": "^8.16.3",
     "plotly.js-dist-min": "^2.29.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

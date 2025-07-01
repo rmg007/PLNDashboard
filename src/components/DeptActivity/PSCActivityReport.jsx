@@ -1,15 +1,18 @@
 import React, { useMemo, useEffect, useState } from 'react';
 import { useLayout } from '../../contexts/LayoutContext';
+import { useFilter } from '../../contexts/FilterContext';
 import { updateTitle } from '../../utils/titleManager';
 import ChartTableComponent from '../../components/ChartTableComponent';
+import BarChartTableComponent from '../../components/charts/BarChartTableComponent';
+import GroupedBarChartTableComponent from '../../components/charts/GroupedBarChartTableComponent';
+import MoreMenu from '../../components/ChartTableComponent/MoreMenu';
 import { createColumnHelper } from '@tanstack/react-table';
 
 const columnHelper = createColumnHelper();
 
-export default function PSCActivityReport({ data, isLoading }) {
-    const { setTitle } = useLayout();
-    const [weekdayData, setWeekdayData] = useState([]);
-    const [isLoadingWeekdayData, setIsLoadingWeekdayData] = useState(true);
+export default function PSCActivityReport({ isLoading }) {
+        const { setTitle } = useLayout();
+    const { filteredPSCData: data, filteredPSCWeekdayData: weekdayData } = useFilter();
     const pscColorPalette = [
         'rgb(14, 50, 148)', 'rgb(122, 125, 129)', 'rgb(5, 100, 5)',
         'rgb(37, 44, 51)', 'rgb(7, 104, 143)', 'rgb(49, 136, 133)',
@@ -23,27 +26,7 @@ export default function PSCActivityReport({ data, isLoading }) {
         return () => setTitle('My Dashboard');
     }, [setTitle]);
     
-    // Fetch weekday data
-    useEffect(() => {
-        const fetchWeekdayData = async () => {
-            try {
-                const response = await fetch('./data/UniquePermitsAnalysisData/DeptAnnualActivityWeekdayJson.json');
-                if (!response.ok) {
-                    throw new Error('Failed to fetch weekday data');
-                }
-                const allData = await response.json();
-                // Filter for PSC department only
-                const pscData = allData.filter(item => item.department === 'PSC');
-                setWeekdayData(pscData);
-            } catch (error) {
-                console.error('Error fetching weekday data:', error);
-            } finally {
-                setIsLoadingWeekdayData(false);
-            }
-        };
-        
-        fetchWeekdayData();
-    }, []);
+
     
     // PSC Activity Report - Data loaded
     // Define columns for the activity table using modern @tanstack/react-table v8 syntax
@@ -92,107 +75,11 @@ export default function PSCActivityReport({ data, isLoading }) {
         })
     ], []);
 
-    // Create traces for the activity chart
-    const traces = useMemo(() => {
-        if (!data || !Array.isArray(data) || data.length === 0) {
-            // No data available for PSC traces
-            return [];
-        }
-
-        // Sort data by year
-        const sortedData = [...data].sort((a, b) => a.year - b.year);
-        
-        return [{
-            x: sortedData.map(item => item.year),
-            y: sortedData.map(item => item.activity_count),
-            type: 'bar',
-            name: 'PSC Activity',
-            marker: { color: pscColorPalette[0] },
-            text: sortedData.map(item => item.activity_count.toLocaleString()),
-            textposition: 'inside',
-            insidetextanchor: 'middle',
-            textfont: {
-                color: 'white',
-                size: 12
-            },
-            hovertemplate: '<b>Year: %{x}</b><br>Activity Count: %{y:,}<extra></extra>'
-        }];
-    }, [data, pscColorPalette]);
+    // Data is now directly used by BarChartTableComponent with xField and yField
     
-    // Create traces for the weekday chart (grouped by year)
-    const weekdayTraces = useMemo(() => {
-        if (!weekdayData || !Array.isArray(weekdayData) || weekdayData.length === 0) {
-            // No weekday data available for PSC traces
-            return [];
-        }
-
-        // Sort data by year
-        const sortedData = [...weekdayData].sort((a, b) => a.year - b.year);
-        
-        // Create a trace for each weekday
-        const weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
-        // Theme 5: Ocean & Cool - Replaced by royalPurplePalette
-        // const colors = ['#03045e', '#0077b6', '#00b4d8', '#48cae4', '#90e0ef'];
-        const weekdayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-        
-        return weekdays.map((day, index) => ({
-            x: sortedData.map(item => item.year),
-            y: sortedData.map(item => item[day]), // Keep as decimal for Plotly
-            type: 'bar',
-            name: weekdayLabels[index],
-            marker: { color: pscColorPalette[index % pscColorPalette.length] },
-            text: sortedData.map(item => `${(item[day] * 100).toFixed(1)}%`),
-            textposition: 'inside',
-            insidetextanchor: 'middle',
-            textangle: -90,
-            textfont: {
-                size: 10,
-                color: 'white'
-            },
-            hovertemplate: '<b>Year: %{x}</b><br>' + weekdayLabels[index] + ': %{text}<extra></extra>'
-        }));
-    }, [weekdayData, pscColorPalette]);
+    // Weekday data is now directly used by GroupedBarChartTableComponent with xField and yFields
     
-    // Create traces for the weekday chart (grouped by day)
-    const weekdayByDayTraces = useMemo(() => {
-        if (!weekdayData || !Array.isArray(weekdayData) || weekdayData.length === 0) {
-            // No weekday data available for day-grouped PSC traces
-            return [];
-        }
-
-        // Sort data by year
-        const sortedData = [...weekdayData].sort((a, b) => a.year - b.year);
-        
-        // Create a trace for each year
-        return sortedData.map((yearData, index) => ({
-            x: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
-            y: [
-                yearData.monday,
-                yearData.tuesday,
-                yearData.wednesday,
-                yearData.thursday,
-                yearData.friday
-            ],
-            type: 'bar',
-            name: `${yearData.year}`,
-            marker: { color: pscColorPalette[index % pscColorPalette.length] },
-            text: [
-                `${(yearData.monday * 100).toFixed(1)}%`,
-                `${(yearData.tuesday * 100).toFixed(1)}%`,
-                `${(yearData.wednesday * 100).toFixed(1)}%`,
-                `${(yearData.thursday * 100).toFixed(1)}%`,
-                `${(yearData.friday * 100).toFixed(1)}%`
-            ],
-            textposition: 'inside',
-            insidetextanchor: 'middle',
-            textangle: -90,
-            textfont: {
-                size: 10,
-                color: 'white'
-            },
-            hovertemplate: '<b>%{x}</b><br>Year: ' + yearData.year + '<br>Percentage: %{text}<extra></extra>'
-        }));
-    }, [weekdayData, pscColorPalette]);
+    // Weekday by day data is now directly used by GroupedBarChartTableComponent with xField and yFields
     
     // Define columns for the weekday by day table
     const weekdayByDayColumns = useMemo(() => [
@@ -223,116 +110,136 @@ export default function PSCActivityReport({ data, isLoading }) {
     ], []);
 
     return (
-        <div className="psc-activity-report space-y-8">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-                <ChartTableComponent 
-                    id='chartPSCActivity'
-                    initialTableWidth={250}
-                    data={Array.isArray(data) ? data : []}
-                    columns={columns}
-                    isLoading={isLoading}
-                    chartTitle="PSC Department Activity by Year"
-                    xAxisTitle="Year"
-                    yAxisTitle="Activity Count"
-                    traces={traces}
-                    showTrendLine={true}
-                    showAverageLine={true}
-                    showBarLabels={true}
-                    barLabelPosition="inside"
-                    barLabelInsideAnchor="middle"
-                    barLabelFontColor="white"
-                    excelFileName="PSCActivityReport.xlsx"
-                    chartFileName="PSCActivityReport.png"
-                    excelSheetName="PSC Activity"
-                    showTablePanel={true}
-                    initialSplitPos={70}
-                    showPagination={false}
-                    showChartTypeSwitcher={true}
+        <div id="psc-activity-report" className="psc-activity-report space-y-8">
+            <div id="psc-activity-chart-container" className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-4 relative">
+                <MoreMenu 
+                    id="more-menu-psc-activity"
                     chartType="bar"
-                    chartLayout={{
+                    setChartType={() => {}}
+                    onExportCsv={() => {}}
+                    onExportPng={() => {}}
+                    showChartTypeSwitcher={true}
+                    tableVisible={true}
+                    onToggleTable={() => {}}
+                    showTableToggle={true}
+                />
+                <BarChartTableComponent
+                    id='chartPSCActivity'
+                    data={Array.isArray(data) ? data : []}
+                    xField="year"
+                    yField="activity_count"
+                    title="PSC Activity by Year"
+                    xAxisLabel="Year"
+                    yAxisLabel="Activity Count"
+                    color={pscColorPalette[0]}
+                    showLabels={true}
+                    labelFormat={(value) => value.toLocaleString()}
+                    columns={columns}
+                    defaultRowsPerPage={10}
+                    defaultSorting={[{ id: 'year', desc: true }]}
+                    chartConfig={{
                         legend: {
                             orientation: 'h',
                             y: -0.2
+                        }
+                    }}
+                    initialState={{
+                        columnSizing: {
+                            year: 60,
+                            activity_count: 100
                         }
                     }}
                 />
             </div>
             
             {/* Weekday Activity Chart - Grouped by Year */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-                <ChartTableComponent 
+            <div id="psc-weekday-activity-chart-container" className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-4 relative">
+                <MoreMenu 
+                    id="more-menu-psc-weekday-activity"
+                    chartType="bar"
+                    setChartType={() => {}}
+                    onExportCsv={() => {}}
+                    onExportPng={() => {}}
+                    showChartTypeSwitcher={false}
+                    tableVisible={true}
+                    onToggleTable={() => {}}
+                    showTableToggle={true}
+                />
+                <GroupedBarChartTableComponent 
                     id='chartPSCWeekdayActivity'
                     data={Array.isArray(weekdayData) ? weekdayData : []}
+                    xField="year"
+                    yFields={['monday', 'tuesday', 'wednesday', 'thursday', 'friday']}
+                    yLabels={['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']}
                     columns={weekdayColumns}
-                    isLoading={isLoadingWeekdayData}
-                    chartTitle="PSC Data - Per Action (Weekdays) - Grouped by Year"
-                    xAxisTitle="Year"
-                    yAxisTitle="Percentage"
-                    traces={weekdayTraces}
-                    showTrendLine={false}
-                    showAverageLine={false}
-                    showBarLabels={true}
-                    barLabelPosition="inside"
+                    title="PSC Activity by Weekday (Grouped by Year)"
+                    xAxisLabel="Fiscal Year"
+                    yAxisLabel="Percentage"
+                    colors={pscColorPalette}
                     barMode="group"
-                    excelFileName="PSCWeekdayActivityReport.xlsx"
-                    chartFileName="PSCWeekdayActivityReport.png"
-                    excelSheetName="PSC Weekday Activity"
-                    showTablePanel={true}
-                    splitterOrientation="horizontal"
-                    initialSplitPos={60}
-                    showPagination={false}
-                    showChartTypeSwitcher={false}
-                    disableHighlighting={true}
-                    chartType="bar"
-                    chartLayout={{
-                        barmode: 'group',
+                    defaultRowsPerPage={10}
+                    defaultSorting={[{ id: 'year', desc: true }]}
+                    chartConfig={{
                         yaxis: {
                             tickformat: '.0%',
-                            range: [0, 0.3], // Set y-axis range from 0% to 30%
+                            range: [0, 0.3] // Set y-axis range from 0% to 30%
                         },
                         legend: {
                             orientation: 'h',
                             y: -0.2
                         }
                     }}
+                    initialState={{
+                        columnSizing: {
+                            year: 60,
+                            monday: 80,
+                            tuesday: 80,
+                            wednesday: 80,
+                            thursday: 80,
+                            friday: 80
+                        }
+                    }}
                 />
             </div>
             
             {/* Weekday Activity Chart - Grouped by Day */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-                <ChartTableComponent 
+            <div id="psc-weekday-by-day-activity-chart-container" className="bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-4 relative">
+                <MoreMenu 
+                    id="more-menu-psc-weekday-by-day-activity"
+                    chartType="bar"
+                    setChartType={() => {}}
+                    onExportCsv={() => {}}
+                    onExportPng={() => {}}
+                    showChartTypeSwitcher={false}
+                    tableVisible={true}
+                    onToggleTable={() => {}}
+                    showTableToggle={true}
+                />
+                <GroupedBarChartTableComponent 
                     id='chartPSCWeekdayByDayActivity'
                     data={Array.isArray(weekdayData) ? weekdayData : []}
+                    xField="year"
+                    yFields={['monday', 'tuesday', 'wednesday', 'thursday', 'friday']}
+                    yLabels={['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']}
                     columns={weekdayByDayColumns}
-                    isLoading={isLoadingWeekdayData}
-                    chartTitle="PSC Data - Per Action (Weekdays) - Grouped by Day"
-                    xAxisTitle="Weekday"
-                    yAxisTitle="Percentage"
-                    traces={weekdayByDayTraces}
-                    showTrendLine={false}
-                    showAverageLine={false}
-                    showBarLabels={true}
-                    barLabelPosition="inside"
+                    title="PSC Data - Per Action (Weekdays) - Grouped by Day"
+                    xAxisLabel="Weekday"
+                    yAxisLabel="Percentage"
+                    colors={pscColorPalette}
                     barMode="group"
-                    excelFileName="PSCWeekdayByDayActivityReport.xlsx"
-                    chartFileName="PSCWeekdayByDayActivityReport.png"
-                    excelSheetName="PSC Weekday By Day Activity"
-                    showTablePanel={true}
-                    splitterOrientation="horizontal"
-                    initialSplitPos={60}
-                    showPagination={false}
-                    showChartTypeSwitcher={false}
-                    disableHighlighting={true}
-                    chartType="bar"
-                    chartLayout={{
-                        barmode: 'group',
+                    height={400}
+                    tablePosition="bottom"
+                    showTable={true}
+                    enableSelection={false}
+                    chartConfig={{
                         yaxis: {
                             tickformat: '.0%',
-                            range: [0, 0.3], // Set y-axis range from 0% to 30%
+                            range: [0, 0.3] // Set y-axis range from 0% to 30%
                         },
                         legend: {
                             orientation: 'h',
-                            y: -0.2
+                            y: -0.1,
+                            yanchor: 'top'
                         }
                     }}
                 />
