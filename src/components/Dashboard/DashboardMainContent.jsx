@@ -3,7 +3,7 @@ import CombinationChart from './CombinationChart';
 import DepartmentTrendsChart from './DepartmentTrendsChart';
 import StackedBarChart from './StackedBarChart';
 import HorizontalBarChart from './TreemapChart';
-import { Skeleton, SkeletonCard } from '../Common/Skeleton';
+import { Skeleton, SkeletonCard } from '../common/Skeleton';
 
 /**
  * Dashboard Main Content component containing detailed charts and tables

@@ -2,8 +2,8 @@ import { Suspense, lazy } from 'react';
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 
 import Layout from './components/Layout.jsx';
-import PageSkeleton from './components/Common/PageSkeleton';
-import ErrorBoundary from './components/Common/ErrorBoundary';
+import PageSkeleton from './components/common/PageSkeleton';
+import ErrorBoundary from './components/common/ErrorBoundary';
 import { FilterProvider } from './contexts/FilterContext';
 
 // Lazy load heavy components

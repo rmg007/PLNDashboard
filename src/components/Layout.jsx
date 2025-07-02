@@ -4,7 +4,7 @@ import { useLayout } from '../contexts/LayoutContext';
 import { useTheme, useIsDark } from '../contexts/ThemeContext';
 import { useFilter } from '../contexts/FilterContext';
 import { useId } from 'react';
-import LayoutSkeleton from './Common/LayoutSkeleton';
+import LayoutSkeleton from './common/LayoutSkeleton';
 import { FiSun, FiMoon, FiMenu, FiPieChart, FiFilter } from 'react-icons/fi';
 import FilterPanel from './Filters/FilterPanel';
 import { FaChevronDown } from 'react-icons/fa';

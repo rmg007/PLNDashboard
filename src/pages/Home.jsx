@@ -1,7 +1,7 @@
 import { useEffect, useState, useId } from 'react';
 import { useLayout } from '../contexts/LayoutContext';
 import { usePersistedState } from '../hooks/usePersistedState';
-import { Skeleton, SkeletonText, SkeletonCard, SkeletonKPICard, SkeletonChart } from '../components/Common/Skeleton';
+import { Skeleton, SkeletonText, SkeletonCard, SkeletonKPICard, SkeletonChart } from '../components/common/Skeleton';
 import '../styles/dashboard.css';
 import '../styles/dashboard-custom.css';
 import DashboardSidebar from '../components/Dashboard/DashboardSidebar';

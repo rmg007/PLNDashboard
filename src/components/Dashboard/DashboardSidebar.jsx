@@ -2,7 +2,7 @@ import React, { useId, useEffect, useState } from 'react';
 import KPICard from './KPICard';
 import PermitTypePieChart from './PermitTypePieChart';
 import DataMetricsCard from './DataMetricsCard';
-import { Skeleton, SkeletonText, SkeletonCard } from '../Common/Skeleton';
+import { Skeleton, SkeletonText, SkeletonCard } from '../common/Skeleton';
 
 /**
  * Dashboard Sidebar component containing KPI cards and summary information
