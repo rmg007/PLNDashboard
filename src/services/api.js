@@ -1,4 +1,23 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+// Determine the base URL based on the current environment
+const getBaseUrl = () => {
+  // If we have an environment variable, use that
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  
+  // In the browser, use the current origin for production
+  if (typeof window !== 'undefined') {
+    // If we're on Vercel, use the current origin
+    if (window.location.hostname.includes('vercel.app')) {
+      return `${window.location.origin}/api`;
+    }
+  }
+  
+  // Default to localhost for development
+  return "http://localhost:5000/api";
+};
+
+const API_BASE_URL = getBaseUrl();
 
 // Helper function to handle API responses
 const handleResponse = async (response) => {

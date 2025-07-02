@@ -30,8 +30,17 @@ app.use(cors({
       "http://localhost:5182",
       "http://localhost:5183",
       "http://localhost:5184",
-      "http://localhost:5185"
+      "http://localhost:5185",
+      "https://pln-dashboard-q6z4.vercel.app",
+      "https://pln-dashboard-q6z4-iachieves-projects.vercel.app"
     ];
+    
+    // Allow any Vercel deployment URL
+    if (origin && origin.includes('vercel.app')) {
+      callback(null, true);
+      return;
+    }
+    
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
