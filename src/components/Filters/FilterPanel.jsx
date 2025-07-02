@@ -32,7 +32,7 @@ export default function FilterPanel() {
   // Extract years from UniquePermits data
   const permitYears = React.useMemo(() => {
     if (!yearlyData || yearlyData.length === 0) return [];
-    const years = new Set(yearlyData.map(item => item.FiscalYear));
+    const years = new Set(yearlyData.map(item => item.fiscal_year).filter(Boolean));
     return Array.from(years).sort((a, b) => b - a);
   }, [yearlyData]);
   
@@ -52,7 +52,7 @@ export default function FilterPanel() {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Year</label>
                 <MultiSelectDropdown 
                   id="dept-activity-year-filter"
-                  options={allYears.map(year => ({ value: year, label: year.toString() }))}
+                  options={(allYears || []).filter(Boolean).map(year => ({ value: year, label: String(year) }))}
                   selectedValues={selectedYears}
                   onChange={handleYearChange}
                 />
@@ -74,7 +74,7 @@ export default function FilterPanel() {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Fiscal Year</label>
                 <MultiSelectDropdown 
                   id="unique-permits-year-filter"
-                  options={permitYears.map(year => ({ value: year, label: year.toString() }))}
+                  options={(permitYears || []).filter(Boolean).map(year => ({ value: year, label: String(year) }))}
                   selectedValues={selectedPermitYears}
                   onChange={handlePermitYearChange}
                 />
@@ -84,7 +84,7 @@ export default function FilterPanel() {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Quarter</label>
                 <MultiSelectDropdown 
                   id="unique-permits-quarter-filter"
-                  options={allQuarters.map(quarter => ({ value: quarter, label: `Q${quarter}` }))}
+                  options={(allQuarters || []).filter(Boolean).map(quarter => ({ value: quarter, label: `Q${quarter}` }))}
                   selectedValues={selectedQuarters}
                   onChange={handleQuarterChange}
                 />
@@ -94,7 +94,7 @@ export default function FilterPanel() {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Month</label>
                 <MultiSelectDropdown 
                   id="unique-permits-month-filter"
-                  options={allMonths.map(month => ({ value: month, label: month }))}
+                  options={(allMonths || []).filter(Boolean).map(month => ({ value: month, label: month }))}
                   selectedValues={selectedMonths}
                   onChange={handleMonthChange}
                 />
